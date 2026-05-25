@@ -1,0 +1,7 @@
+spec:
+  name: ASXX_ADMX_CTL
+  revision: "1.0"
+
+delivery:
+  baseline: AEMS_ASG_MD25_04
+  sdt: SDT_56789

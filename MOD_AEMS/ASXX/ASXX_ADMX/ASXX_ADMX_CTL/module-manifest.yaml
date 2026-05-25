@@ -1,0 +1,8 @@
+module:
+  name: ASXX_ADMX_CTL
+  revision: "1.0"
+  status: VALIDATED
+
+delivery:
+  baseline: AEMS_ASG_MD25_04
+  mdt: MDT_12345
