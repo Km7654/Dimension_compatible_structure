@@ -1,0 +1,23 @@
+module: COMB_MAIN_CTL
+type: module
+area: MOD_HEMS
+function: COMB
+sub_function: COMB_MAIN
+version: v1.0.0
+delivery_cycle: MD31_01
+commit: a25c82bb2f2584f14d8804c745de5defdb0121a5
+generated_by: manifest-generator-script
+generated_on: 2026-06-25T08:57:02Z
+files:
+  - analysis/COMB_MAIN_CTL_analysis_report.txt
+  - calibration/COMB_MAIN_CTL_calibration_file.a2l
+  - delivery/COMB_MAIN_CTL_delivery_package.zip
+  - dictionary/COMB_MAIN_CTL_dictionary.sldd
+  - mdt/COMB_MAIN_CTL_mdt_reference.txt
+  - model-interface/COMB_MAIN_CTL_interface_file.txt
+  - model/COMB_MAIN_CTL.slx
+  - reports/COMB_MAIN_CTL_east_report.pdf
+  - sof/COMB_MAIN_CTL_sof_reference.txt
+  - stimuli/COMB_MAIN_CTL_test_stimuli.mat
+  - traceability/trace_links.csv
+  - variant/COMB_MAIN_CTL_variant_list.csv

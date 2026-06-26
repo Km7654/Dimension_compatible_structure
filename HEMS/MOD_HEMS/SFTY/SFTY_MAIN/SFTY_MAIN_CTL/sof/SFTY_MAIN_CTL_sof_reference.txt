@@ -1,0 +1,1 @@
+SOF reference for SFTY_MAIN_CTL

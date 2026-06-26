@@ -1,0 +1,194 @@
+name: Structure Check
+
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+      - 'release/**'
+  push:
+    branches:
+      - main
+      - production
+      - 'release/**'
+      - 'test/**'
+      - 'feature/**'
+  workflow_dispatch:
+
+jobs:
+  structure-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          elif [[ "${{ github.event_name }}" == "push" ]]; then
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+          else
+            BASE_SHA="$(git rev-parse HEAD~1 2>/dev/null || echo '')"
+            HEAD_SHA="$(git rev-parse HEAD)"
+          fi
+
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            git ls-files > changed_files.txt
+          else
+            git diff --name-only --diff-filter=ACMRD "$BASE_SHA" "$HEAD_SHA" > changed_files.txt || true
+          fi
+
+          echo "Changed files:"
+          cat changed_files.txt || true
+
+      - name: Validate folder structure under HEMS only
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          HEMS_ROOT="HEMS"
+          fail=0
+          checked_hems_files=0
+
+          SPEC_ALLOWED=("source" "pdf" "comparison" "history" "crs" "sdt" "technical-facts" "traceability")
+          MOD_ALLOWED=("model" "model-interface" "variant" "dictionary" "stimuli" "calibration" "analysis" "reports" "delivery" "sof" "mdt" "traceability")
+          CODE_ALLOWED=("source" "include" "static-analysis" "unit-sil-results" "certification" "traceability")
+
+          contains() {
+            local seeking="$1"; shift
+            for item in "$@"; do
+              [[ "$item" == "$seeking" ]] && return 0
+            done
+            return 1
+          }
+
+          while IFS= read -r file; do
+            [[ -z "$file" ]] && continue
+
+            # IMPORTANT:
+            # Ignore all files outside HEMS.
+            # Example: dummy.sh, README.md, .gitignore, .github/workflows/*.yml
+            # These files will not be validated by this workflow.
+            if [[ "$file" != "$HEMS_ROOT/"* ]]; then
+              echo "Skipping non-HEMS file: $file"
+              continue
+            fi
+
+            echo "Checking HEMS file: $file"
+            checked_hems_files=$((checked_hems_files + 1))
+
+            # Allow HEMS root-level support files if they exist
+            if [[ "$file" == "$HEMS_ROOT/README.md" ]] || \
+               [[ "$file" == "$HEMS_ROOT/CODEOWNERS" ]] || \
+               [[ "$file" == "$HEMS_ROOT/.gitignore" ]] || \
+               [[ "$file" == "$HEMS_ROOT/.gitattributes" ]] || \
+               [[ "$file" == "$HEMS_ROOT/BASELINES/"* ]]; then
+              continue
+            fi
+
+            IFS='/' read -r -a parts <<< "$file"
+
+            # Must start with HEMS
+            if [[ "${parts[0]}" != "$HEMS_ROOT" ]]; then
+              echo "::error file=$file::File must be under HEMS."
+              fail=1
+              continue
+            fi
+
+            # Must have at least HEMS/AREA
+            if (( ${#parts[@]} < 2 )); then
+              echo "::error file=$file::Invalid path under HEMS."
+              fail=1
+              continue
+            fi
+
+            area="${parts[1]}"
+
+            # Must be inside one of the managed areas
+            if [[ "$area" != "SPEC_HEMS" && "$area" != "MOD_HEMS" && "$area" != "CODE_HEMS" ]]; then
+              echo "::error file=$file::File is outside SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
+              fail=1
+              continue
+            fi
+
+            # Required path:
+            # HEMS / AREA / Function / Sub-function / Module / Item
+            if (( ${#parts[@]} < 6 )); then
+              echo "::error file=$file::Path must follow HEMS/AREA/Function/Sub-function/Module/Item."
+              fail=1
+              continue
+            fi
+
+            module_child="${parts[5]}"
+
+            case "$area" in
+              SPEC_HEMS)
+                if [[ "$module_child" == "spec-manifest.yaml" ]]; then
+                  :
+                elif ! contains "$module_child" "${SPEC_ALLOWED[@]}"; then
+                  echo "::error file=$file::Invalid SPEC_HEMS folder or file: $module_child"
+                  fail=1
+                  continue
+                fi
+
+                if [[ "$file" == *.pdf && "$module_child" != "pdf" ]]; then
+                  echo "::error file=$file::PDF files must be inside SPEC_HEMS/.../pdf/"
+                  fail=1
+                fi
+                ;;
+
+              MOD_HEMS)
+                if [[ "$module_child" == "module-manifest.yaml" ]]; then
+                  :
+                elif ! contains "$module_child" "${MOD_ALLOWED[@]}"; then
+                  echo "::error file=$file::Invalid MOD_HEMS folder or file: $module_child"
+                  fail=1
+                  continue
+                fi
+
+                if [[ "$file" == *.slx && "$module_child" != "model" ]]; then
+                  echo "::error file=$file::.slx files must be inside MOD_HEMS/.../model/"
+                  fail=1
+                fi
+                ;;
+
+              CODE_HEMS)
+                if [[ "$module_child" == "code-manifest.yaml" ]]; then
+                  :
+                elif ! contains "$module_child" "${CODE_ALLOWED[@]}"; then
+                  echo "::error file=$file::Invalid CODE_HEMS folder or file: $module_child"
+                  fail=1
+                  continue
+                fi
+
+                if [[ "$file" == *.c && "$module_child" != "source" ]]; then
+                  echo "::error file=$file::.c files must be inside CODE_HEMS/.../source/"
+                  fail=1
+                fi
+
+                if [[ "$file" == *.h && "$module_child" != "include" ]]; then
+                  echo "::error file=$file::.h files must be inside CODE_HEMS/.../include/"
+                  fail=1
+                fi
+                ;;
+            esac
+
+          done < changed_files.txt
+
+          echo "Total HEMS files checked: $checked_hems_files"
+
+          if [[ "$fail" -ne 0 ]]; then
+            echo "Structure check failed."
+            exit 1
+          fi
+
+          echo "Structure check passed."

@@ -1,0 +1,17 @@
+module: FLPC_MAIN_CTL
+type: code
+area: CODE_HEMS
+function: FLPC
+sub_function: FLPC_MAIN
+version: v1.0.0
+delivery_cycle: MD31_01
+commit: a25c82bb2f2584f14d8804c745de5defdb0121a5
+generated_by: manifest-generator-script
+generated_on: 2026-06-25T08:57:02Z
+files:
+  - certification/FLPC_MAIN_CTL_certification_report.txt
+  - include/main.h
+  - source/main.c
+  - static-analysis/FLPC_MAIN_CTL_lint_report.txt
+  - traceability/trace_links.csv
+  - unit-sil-results/FLPC_MAIN_CTL_sil_results.txt

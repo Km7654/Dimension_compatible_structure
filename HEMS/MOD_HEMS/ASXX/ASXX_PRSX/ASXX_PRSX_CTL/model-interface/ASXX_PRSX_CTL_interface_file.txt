@@ -1,0 +1,1 @@
+dummy model interface content for ASXX_PRSX_CTL

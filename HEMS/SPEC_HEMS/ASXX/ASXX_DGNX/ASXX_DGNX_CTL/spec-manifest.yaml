@@ -1,0 +1,19 @@
+module: ASXX_DGNX_CTL
+type: specification
+area: SPEC_HEMS
+function: ASXX
+sub_function: ASXX_DGNX
+version: v1.0.0
+delivery_cycle: MD31_01
+commit: a25c82bb2f2584f14d8804c745de5defdb0121a5
+generated_by: manifest-generator-script
+generated_on: 2026-06-25T08:57:02Z
+files:
+  - comparison/ASXX_DGNX_CTL_comparison_report.txt
+  - crs/ASXX_DGNX_CTL_interface_spec.xml
+  - history/ASXX_DGNX_CTL_history_log.txt
+  - pdf/ASXX_DGNX_CTL_spec_document.pdf
+  - sdt/ASXX_DGNX_CTL_sdt_reference.txt
+  - source/ASXX_DGNX_CTL_spec_source.xml
+  - technical-facts/ASXX_DGNX_CTL_technical_facts.txt
+  - traceability/trace_links.csv

@@ -1,0 +1,23 @@
+module: FLPC_MAIN_CTL
+type: module
+area: MOD_HEMS
+function: FLPC
+sub_function: FLPC_MAIN
+version: v1.0.0
+delivery_cycle: MD31_01
+commit: a25c82bb2f2584f14d8804c745de5defdb0121a5
+generated_by: manifest-generator-script
+generated_on: 2026-06-25T08:57:02Z
+files:
+  - analysis/FLPC_MAIN_CTL_analysis_report.txt
+  - calibration/FLPC_MAIN_CTL_calibration_file.a2l
+  - delivery/FLPC_MAIN_CTL_delivery_package.zip
+  - dictionary/FLPC_MAIN_CTL_dictionary.sldd
+  - mdt/FLPC_MAIN_CTL_mdt_reference.txt
+  - model-interface/FLPC_MAIN_CTL_interface_file.txt
+  - model/FLPC_MAIN_CTL.slx
+  - reports/FLPC_MAIN_CTL_east_report.pdf
+  - sof/FLPC_MAIN_CTL_sof_reference.txt
+  - stimuli/FLPC_MAIN_CTL_test_stimuli.mat
+  - traceability/trace_links.csv
+  - variant/FLPC_MAIN_CTL_variant_list.csv

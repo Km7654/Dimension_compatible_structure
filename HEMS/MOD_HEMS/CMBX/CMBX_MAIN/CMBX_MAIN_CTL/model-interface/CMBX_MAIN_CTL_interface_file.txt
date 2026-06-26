@@ -1,0 +1,1 @@
+dummy model interface content for CMBX_MAIN_CTL
