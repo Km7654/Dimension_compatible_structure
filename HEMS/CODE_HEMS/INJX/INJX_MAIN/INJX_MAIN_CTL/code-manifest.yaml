@@ -3,11 +3,11 @@ type: code
 area: CODE_HEMS
 function: INJX
 sub_function: INJX_MAIN
-version: v1.0.0
+version: v1.0.1
 delivery_cycle: MD31_01
-commit: a25c82bb2f2584f14d8804c745de5defdb0121a5
-generated_by: manifest-generator-script
-generated_on: 2026-06-25T08:57:02Z
+commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+generated_by: GitHub Actions
+generated_on: 2026-06-26T06:55:51Z
 files:
   - certification/INJX_MAIN_CTL_certification_report.txt
   - include/main.h

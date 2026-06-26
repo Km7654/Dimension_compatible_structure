@@ -3,11 +3,11 @@ type: specification
 area: SPEC_HEMS
 function: ASXX
 sub_function: ASXX_VCRX
-version: v1.0.0
+version: v1.0.1
 delivery_cycle: MD31_01
-commit: a25c82bb2f2584f14d8804c745de5defdb0121a5
-generated_by: manifest-generator-script
-generated_on: 2026-06-25T08:57:02Z
+commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+generated_by: GitHub Actions
+generated_on: 2026-06-26T06:55:52Z
 files:
   - comparison/ASXX_VCRX_CTL_comparison_report.txt
   - crs/ASXX_VCRX_CTL_interface_spec.xml
