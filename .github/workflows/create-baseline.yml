@@ -1,4 +1,4 @@
-name: Release Baseline
+name: Create Baseline
 
 on:
   workflow_dispatch:
