@@ -3,11 +3,11 @@ type: code
 area: CODE_HEMS
 function: COMB
 sub_function: COMB_MAIN
-version: v1.0.2
-delivery_cycle: MD31_01
-commit: 097ef135540066c5c041d2a1cf298328a975a7d1
+version: v1.0.2.1
+delivery_cycle: MD31_02
+commit: 1064b2da02e5c459fb32412d10af602e251adfd5
 generated_by: GitHub Actions
-generated_on: 2026-06-29T06:23:35Z
+generated_on: 2026-06-29T09:14:58Z
 files:
   - certification/COMB_MAIN_CTL_certification_report.txt
   - include/main.h
