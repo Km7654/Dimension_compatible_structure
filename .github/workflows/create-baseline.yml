@@ -1,9 +1,9 @@
-name: Create Baseline Tag
+name: Release Baseline
 
 on:
   workflow_dispatch:
     inputs:
-      baseline_version:
+      version:
         description: "Baseline version/tag, example: v1.0.0"
         required: true
         type: string
@@ -31,7 +31,7 @@ on:
         type: string
 
       approved_custom_paths:
-        description: "Only for approved_custom_paths. Comma-separated HEMS paths/files/folders."
+        description: "Only for approved_custom_paths. Comma-separated HEMS files/folders"
         required: false
         type: string
 
@@ -39,7 +39,7 @@ permissions:
   contents: write
 
 jobs:
-  create-baseline-tag:
+  release-baseline:
     runs-on: ubuntu-latest
 
     steps:
@@ -56,38 +56,45 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zip
 
-      - name: Validate inputs
+      - name: Configure Git user
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Validate inputs and version
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.baseline_version }}"
+          VERSION="${{ inputs.version }}"
           SCOPE="${{ inputs.release_scope }}"
           SELECTED_PATH="${{ inputs.selected_path }}"
           CUSTOM_PATHS="${{ inputs.approved_custom_paths }}"
 
-          echo "Baseline version: $VERSION"
+          echo "Version: $VERSION"
           echo "Release scope: $SCOPE"
 
           git fetch --tags
 
           if git rev-parse "$VERSION" >/dev/null 2>&1; then
             echo "ERROR: Tag $VERSION already exists."
-            echo "Use a new baseline version, for example v1.0.1."
+            echo "Use a new version, for example v1.0.1."
             exit 1
           fi
 
           if gh release view "$VERSION" >/dev/null 2>&1; then
             echo "ERROR: GitHub Release $VERSION already exists."
-            echo "Use a new baseline version."
+            echo "Use a new version."
             exit 1
           fi
 
           if [[ "$SCOPE" == "code_module" || "$SCOPE" == "model_module" || "$SCOPE" == "spec_module" ]]; then
             if [[ -z "$SELECTED_PATH" ]]; then
-              echo "ERROR: selected_path is required for $SCOPE."
+              echo "ERROR: selected_path is required for scope $SCOPE."
               exit 1
             fi
 
@@ -104,17 +111,79 @@ jobs:
 
           if [[ "$SCOPE" == "approved_custom_paths" ]]; then
             if [[ -z "$CUSTOM_PATHS" ]]; then
-              echo "ERROR: approved_custom_paths input is required."
+              echo "ERROR: approved_custom_paths is required for approved_custom_paths scope."
               exit 1
             fi
           fi
 
-      - name: Collect selected files
+      - name: Generate package-level manifests
         shell: bash
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.baseline_version }}"
+          HEMS_ROOT="HEMS"
+          VERSION="${{ inputs.version }}"
+          DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
+          COMMIT_ID="${{ github.sha }}"
+
+          generate_manifest() {
+            local module_dir="$1"
+            local manifest_file="$2"
+            local area="$3"
+            local type="$4"
+
+            local module
+            local sub_function
+            local function_name
+
+            module="$(basename "$module_dir")"
+            sub_function="$(basename "$(dirname "$module_dir")")"
+            function_name="$(basename "$(dirname "$(dirname "$module_dir")")")"
+
+            {
+              echo "module: $module"
+              echo "type: $type"
+              echo "area: $area"
+              echo "function: $function_name"
+              echo "sub_function: $sub_function"
+              echo "version: $VERSION"
+              echo "delivery_cycle: $DELIVERY_CYCLE"
+              echo "commit: $COMMIT_ID"
+              echo "generated_by: GitHub Actions"
+              echo "generated_on: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+              echo "files:"
+            } > "$manifest_file"
+
+            find "$module_dir" -type f ! -name "$(basename "$manifest_file")" | sort | while read -r file; do
+              relative_file="${file#"$module_dir/"}"
+              echo "  - $relative_file" >> "$manifest_file"
+            done
+          }
+
+          if [[ -d "$HEMS_ROOT/CODE_HEMS" ]]; then
+            while IFS= read -r dir; do
+              generate_manifest "$dir" "$dir/code-manifest.yaml" "CODE_HEMS" "code"
+            done < <(find "$HEMS_ROOT/CODE_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
+          fi
+
+          if [[ -d "$HEMS_ROOT/MOD_HEMS" ]]; then
+            while IFS= read -r dir; do
+              generate_manifest "$dir" "$dir/module-manifest.yaml" "MOD_HEMS" "module"
+            done < <(find "$HEMS_ROOT/MOD_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
+          fi
+
+          if [[ -d "$HEMS_ROOT/SPEC_HEMS" ]]; then
+            while IFS= read -r dir; do
+              generate_manifest "$dir" "$dir/spec-manifest.yaml" "SPEC_HEMS" "specification"
+            done < <(find "$HEMS_ROOT/SPEC_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
+          fi
+
+      - name: Collect selected released files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.version }}"
           SCOPE="${{ inputs.release_scope }}"
           SELECTED_PATH="${{ inputs.selected_path }}"
           CUSTOM_PATHS="${{ inputs.approved_custom_paths }}"
@@ -126,7 +195,7 @@ jobs:
           mkdir -p "$RELEASE_DIR"
           : > "$SELECTED_FILES"
 
-          echo "Collecting selected files..."
+          echo "Collecting files for scope: $SCOPE"
 
           if [[ "$SCOPE" == "full_hems" ]]; then
             find HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
@@ -137,7 +206,6 @@ jobs:
               echo "ERROR: code_module scope requires selected_path under HEMS/CODE_HEMS."
               exit 1
             fi
-
             find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
           fi
 
@@ -146,7 +214,6 @@ jobs:
               echo "ERROR: model_module scope requires selected_path under HEMS/MOD_HEMS."
               exit 1
             fi
-
             find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
           fi
 
@@ -155,7 +222,6 @@ jobs:
               echo "ERROR: spec_module scope requires selected_path under HEMS/SPEC_HEMS."
               exit 1
             fi
-
             find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
           fi
 
@@ -186,7 +252,7 @@ jobs:
           fi
 
           if [[ ! -s "$SELECTED_FILES" ]]; then
-            echo "ERROR: No files selected for baseline."
+            echo "ERROR: No files selected for release."
             exit 1
           fi
 
@@ -198,17 +264,21 @@ jobs:
             cp "$file" "$RELEASE_DIR/$file"
           done < "$SELECTED_FILES"
 
-      - name: Generate baseline manifest
+      - name: Generate baseline manifest with released files and versions
         shell: bash
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.baseline_version }}"
+          VERSION="${{ inputs.version }}"
           DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
           SCOPE="${{ inputs.release_scope }}"
           SELECTED_PATH="${{ inputs.selected_path }}"
+
+          BASELINE_DIR="HEMS/BASELINES/$VERSION"
+          BASELINE_MANIFEST="$BASELINE_DIR/baseline-manifest.yaml"
           RELEASE_DIR="baseline-selection-$VERSION"
-          MANIFEST_FILE="baseline-manifest-$VERSION.yaml"
+
+          mkdir -p "$BASELINE_DIR"
 
           {
             echo "baseline: $VERSION"
@@ -221,7 +291,7 @@ jobs:
             echo "generated_on: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
             echo ""
             echo "released_files:"
-          } > "$MANIFEST_FILE"
+          } > "$BASELINE_MANIFEST"
 
           while IFS= read -r file; do
             IFS='/' read -r -a parts <<< "$file"
@@ -244,20 +314,65 @@ jobs:
               echo "    release_commit: ${{ github.sha }}"
               echo "    last_changed_commit: $last_changed_commit"
               echo "    sha256: $file_hash"
-            } >> "$MANIFEST_FILE"
+            } >> "$BASELINE_MANIFEST"
           done < selected-files.txt
 
-          cp "$MANIFEST_FILE" "$RELEASE_DIR/$MANIFEST_FILE"
+          cp "$BASELINE_MANIFEST" "$RELEASE_DIR/baseline-manifest-$VERSION.yaml"
 
           echo "Generated baseline manifest:"
-          cat "$MANIFEST_FILE"
+          cat "$BASELINE_MANIFEST"
+
+      - name: Generate checksum file
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.version }}"
+          BASELINE_DIR="HEMS/BASELINES/$VERSION"
+          CHECKSUM_FILE="$BASELINE_DIR/checksums.sha256"
+          RELEASE_DIR="baseline-selection-$VERSION"
+
+          : > "$CHECKSUM_FILE"
+
+          while IFS= read -r file; do
+            sha256sum "$file" >> "$CHECKSUM_FILE"
+          done < selected-files.txt
+
+          cp "$CHECKSUM_FILE" "$RELEASE_DIR/checksums-$VERSION.sha256"
+
+          echo "Generated checksums:"
+          cat "$CHECKSUM_FILE"
+
+      - name: Commit generated baseline metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.version }}"
+
+          git add HEMS
+
+          if git diff --cached --quiet; then
+            echo "No baseline metadata changes to commit."
+          else
+            git commit -m "Generate baseline metadata for $VERSION"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      - name: Refresh after metadata push
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin "${{ github.ref_name }}"
+          git reset --hard "origin/${{ github.ref_name }}"
 
       - name: Create baseline ZIP package
         shell: bash
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.baseline_version }}"
+          VERSION="${{ inputs.version }}"
           RELEASE_DIR="baseline-selection-$VERSION"
           ZIP_FILE="baseline-$VERSION.zip"
 
@@ -271,7 +386,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.baseline_version }}"
+          VERSION="${{ inputs.version }}"
 
           git tag "$VERSION"
           git push origin "$VERSION"
@@ -281,12 +396,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.baseline_version }}"
+          VERSION="${{ inputs.version }}"
           DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
           SCOPE="${{ inputs.release_scope }}"
 
           {
-            echo "# Baseline $VERSION"
+            echo "# HEMS Baseline $VERSION"
             echo ""
             echo "## Delivery Cycle"
             echo "$DELIVERY_CYCLE"
@@ -297,6 +412,7 @@ jobs:
             echo "## Included Assets"
             echo "- baseline-$VERSION.zip"
             echo "- baseline-manifest-$VERSION.yaml"
+            echo "- checksums-$VERSION.sha256"
             echo ""
             echo "## Generated By"
             echo "GitHub Actions"
@@ -304,17 +420,18 @@ jobs:
 
           cat release-notes.md
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release and upload assets
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.baseline_version }}"
+          VERSION="${{ inputs.version }}"
 
           gh release create "$VERSION" \
             "baseline-$VERSION.zip" \
-            "baseline-manifest-$VERSION.yaml" \
-            --title "Baseline $VERSION" \
+            "baseline-selection-$VERSION/baseline-manifest-$VERSION.yaml" \
+            "baseline-selection-$VERSION/checksums-$VERSION.sha256" \
+            --title "HEMS Baseline $VERSION" \
             --notes-file release-notes.md
