@@ -3,11 +3,11 @@ type: specification
 area: SPEC_HEMS
 function: SFTY
 sub_function: SFTY_MAIN
-version: v1.0.1
+version: v1.0.2
 delivery_cycle: MD31_01
-commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+commit: 097ef135540066c5c041d2a1cf298328a975a7d1
 generated_by: GitHub Actions
-generated_on: 2026-06-26T06:55:52Z
+generated_on: 2026-06-29T06:23:36Z
 files:
   - comparison/SFTY_MAIN_CTL_comparison_report.txt
   - crs/SFTY_MAIN_CTL_interface_spec.xml

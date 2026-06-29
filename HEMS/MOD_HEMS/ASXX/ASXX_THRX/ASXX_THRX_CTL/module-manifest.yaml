@@ -3,11 +3,11 @@ type: module
 area: MOD_HEMS
 function: ASXX
 sub_function: ASXX_THRX
-version: v1.0.1
+version: v1.0.2
 delivery_cycle: MD31_01
-commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+commit: 097ef135540066c5c041d2a1cf298328a975a7d1
 generated_by: GitHub Actions
-generated_on: 2026-06-26T06:55:51Z
+generated_on: 2026-06-29T06:23:35Z
 files:
   - analysis/ASXX_THRX_CTL_analysis_report.txt
   - calibration/ASXX_THRX_CTL_calibration_file.a2l
