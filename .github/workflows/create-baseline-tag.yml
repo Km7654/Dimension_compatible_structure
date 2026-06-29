@@ -1,0 +1,320 @@
+name: Create Baseline Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseline_version:
+        description: "Baseline version/tag, example: v1.0.0"
+        required: true
+        type: string
+
+      delivery_cycle:
+        description: "Delivery cycle, example: MD31_01"
+        required: true
+        default: "MD31_01"
+        type: string
+
+      release_scope:
+        description: "Choose release scope"
+        required: true
+        type: choice
+        options:
+          - full_hems
+          - code_module
+          - model_module
+          - spec_module
+          - approved_custom_paths
+
+      selected_path:
+        description: "Required for code_module/model_module/spec_module. Example: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL"
+        required: false
+        type: string
+
+      approved_custom_paths:
+        description: "Only for approved_custom_paths. Comma-separated HEMS paths/files/folders."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  create-baseline-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install required tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y zip
+
+      - name: Validate inputs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.baseline_version }}"
+          SCOPE="${{ inputs.release_scope }}"
+          SELECTED_PATH="${{ inputs.selected_path }}"
+          CUSTOM_PATHS="${{ inputs.approved_custom_paths }}"
+
+          echo "Baseline version: $VERSION"
+          echo "Release scope: $SCOPE"
+
+          git fetch --tags
+
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "ERROR: Tag $VERSION already exists."
+            echo "Use a new baseline version, for example v1.0.1."
+            exit 1
+          fi
+
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            echo "ERROR: GitHub Release $VERSION already exists."
+            echo "Use a new baseline version."
+            exit 1
+          fi
+
+          if [[ "$SCOPE" == "code_module" || "$SCOPE" == "model_module" || "$SCOPE" == "spec_module" ]]; then
+            if [[ -z "$SELECTED_PATH" ]]; then
+              echo "ERROR: selected_path is required for $SCOPE."
+              exit 1
+            fi
+
+            if [[ "$SELECTED_PATH" != HEMS/* ]]; then
+              echo "ERROR: selected_path must be under HEMS."
+              exit 1
+            fi
+
+            if [[ ! -d "$SELECTED_PATH" ]]; then
+              echo "ERROR: selected_path does not exist or is not a folder: $SELECTED_PATH"
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "approved_custom_paths" ]]; then
+            if [[ -z "$CUSTOM_PATHS" ]]; then
+              echo "ERROR: approved_custom_paths input is required."
+              exit 1
+            fi
+          fi
+
+      - name: Collect selected files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.baseline_version }}"
+          SCOPE="${{ inputs.release_scope }}"
+          SELECTED_PATH="${{ inputs.selected_path }}"
+          CUSTOM_PATHS="${{ inputs.approved_custom_paths }}"
+
+          SELECTED_FILES="selected-files.txt"
+          RELEASE_DIR="baseline-selection-$VERSION"
+
+          rm -rf "$RELEASE_DIR"
+          mkdir -p "$RELEASE_DIR"
+          : > "$SELECTED_FILES"
+
+          echo "Collecting selected files..."
+
+          if [[ "$SCOPE" == "full_hems" ]]; then
+            find HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+          fi
+
+          if [[ "$SCOPE" == "code_module" ]]; then
+            if [[ "$SELECTED_PATH" != HEMS/CODE_HEMS/* ]]; then
+              echo "ERROR: code_module scope requires selected_path under HEMS/CODE_HEMS."
+              exit 1
+            fi
+
+            find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+          fi
+
+          if [[ "$SCOPE" == "model_module" ]]; then
+            if [[ "$SELECTED_PATH" != HEMS/MOD_HEMS/* ]]; then
+              echo "ERROR: model_module scope requires selected_path under HEMS/MOD_HEMS."
+              exit 1
+            fi
+
+            find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+          fi
+
+          if [[ "$SCOPE" == "spec_module" ]]; then
+            if [[ "$SELECTED_PATH" != HEMS/SPEC_HEMS/* ]]; then
+              echo "ERROR: spec_module scope requires selected_path under HEMS/SPEC_HEMS."
+              exit 1
+            fi
+
+            find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+          fi
+
+          if [[ "$SCOPE" == "approved_custom_paths" ]]; then
+            echo "$CUSTOM_PATHS" | tr ',' '\n' | while read -r raw_path; do
+              clean_path="$(echo "$raw_path" | xargs)"
+
+              if [[ -z "$clean_path" ]]; then
+                continue
+              fi
+
+              if [[ "$clean_path" != HEMS/* ]]; then
+                echo "ERROR: Custom path must be under HEMS: $clean_path"
+                exit 1
+              fi
+
+              if [[ -f "$clean_path" ]]; then
+                echo "$clean_path" >> "$SELECTED_FILES"
+              elif [[ -d "$clean_path" ]]; then
+                find "$clean_path" -type f 2>/dev/null | sort >> "$SELECTED_FILES"
+              else
+                echo "ERROR: Custom path does not exist: $clean_path"
+                exit 1
+              fi
+            done
+
+            sort -u "$SELECTED_FILES" -o "$SELECTED_FILES"
+          fi
+
+          if [[ ! -s "$SELECTED_FILES" ]]; then
+            echo "ERROR: No files selected for baseline."
+            exit 1
+          fi
+
+          echo "Selected files:"
+          cat "$SELECTED_FILES"
+
+          while IFS= read -r file; do
+            mkdir -p "$RELEASE_DIR/$(dirname "$file")"
+            cp "$file" "$RELEASE_DIR/$file"
+          done < "$SELECTED_FILES"
+
+      - name: Generate baseline manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.baseline_version }}"
+          DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
+          SCOPE="${{ inputs.release_scope }}"
+          SELECTED_PATH="${{ inputs.selected_path }}"
+          RELEASE_DIR="baseline-selection-$VERSION"
+          MANIFEST_FILE="baseline-manifest-$VERSION.yaml"
+
+          {
+            echo "baseline: $VERSION"
+            echo "delivery_cycle: $DELIVERY_CYCLE"
+            echo "release_scope: $SCOPE"
+            echo "selected_path: ${SELECTED_PATH:-not_applicable}"
+            echo "release_commit: ${{ github.sha }}"
+            echo "branch: ${{ github.ref_name }}"
+            echo "generated_by: GitHub Actions"
+            echo "generated_on: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+            echo ""
+            echo "released_files:"
+          } > "$MANIFEST_FILE"
+
+          while IFS= read -r file; do
+            IFS='/' read -r -a parts <<< "$file"
+
+            area="${parts[1]:-unknown}"
+            function_name="${parts[2]:-unknown}"
+            sub_function="${parts[3]:-unknown}"
+            module="${parts[4]:-unknown}"
+
+            file_hash="$(sha256sum "$file" | awk '{print $1}')"
+            last_changed_commit="$(git log -n 1 --format="%H" -- "$file" || echo "unknown")"
+
+            {
+              echo "  - path: $file"
+              echo "    area: $area"
+              echo "    function: $function_name"
+              echo "    sub_function: $sub_function"
+              echo "    module: $module"
+              echo "    release_version: $VERSION"
+              echo "    release_commit: ${{ github.sha }}"
+              echo "    last_changed_commit: $last_changed_commit"
+              echo "    sha256: $file_hash"
+            } >> "$MANIFEST_FILE"
+          done < selected-files.txt
+
+          cp "$MANIFEST_FILE" "$RELEASE_DIR/$MANIFEST_FILE"
+
+          echo "Generated baseline manifest:"
+          cat "$MANIFEST_FILE"
+
+      - name: Create baseline ZIP package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.baseline_version }}"
+          RELEASE_DIR="baseline-selection-$VERSION"
+          ZIP_FILE="baseline-$VERSION.zip"
+
+          zip -r "$ZIP_FILE" "$RELEASE_DIR"
+
+          echo "Created package:"
+          ls -lh "$ZIP_FILE"
+
+      - name: Create Git tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.baseline_version }}"
+
+          git tag "$VERSION"
+          git push origin "$VERSION"
+
+      - name: Prepare release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.baseline_version }}"
+          DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
+          SCOPE="${{ inputs.release_scope }}"
+
+          {
+            echo "# Baseline $VERSION"
+            echo ""
+            echo "## Delivery Cycle"
+            echo "$DELIVERY_CYCLE"
+            echo ""
+            echo "## Release Scope"
+            echo "$SCOPE"
+            echo ""
+            echo "## Included Assets"
+            echo "- baseline-$VERSION.zip"
+            echo "- baseline-manifest-$VERSION.yaml"
+            echo ""
+            echo "## Generated By"
+            echo "GitHub Actions"
+          } > release-notes.md
+
+          cat release-notes.md
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.baseline_version }}"
+
+          gh release create "$VERSION" \
+            "baseline-$VERSION.zip" \
+            "baseline-manifest-$VERSION.yaml" \
+            --title "Baseline $VERSION" \
+            --notes-file release-notes.md
