@@ -3,11 +3,11 @@ type: specification
 area: SPEC_HEMS
 function: ASXX
 sub_function: ASXX_THRX
-version: v1.0.2.4
-delivery_cycle: MD31_02
-commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+version: v1.0.2.5
+delivery_cycle: MD31_01
+commit: a49def1c47bee6aaec2351093fe165884a503919
 generated_by: GitHub Actions
-generated_on: 2026-06-30T07:57:42Z
+generated_on: 2026-06-30T08:01:11Z
 files:
   - comparison/ASXX_THRX_CTL_comparison_report.txt
   - crs/ASXX_THRX_CTL_interface_spec.xml
