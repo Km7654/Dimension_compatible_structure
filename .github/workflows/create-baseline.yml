@@ -299,10 +299,10 @@ jobs:
           while IFS= read -r file; do
             IFS='/' read -r -a parts <<< "$file"
 
-            area="${parts[1]:-unknown}"
-            function_name="${parts[2]:-unknown}"
-            sub_function="${parts[3]:-unknown}"
-            module="${parts[4]:-unknown}"
+            area="${parts-unknown}"
+            function_name="${parts-unknown}"
+            sub_function="${parts-unknown}"
+            module="${parts-unknown}"
 
             file_hash="$(sha256sum "$file" | awk '{print $1}')"
             last_changed_commit="$(git log -n 1 --format="%H" -- "$file" || echo "unknown")"
@@ -332,9 +332,11 @@ jobs:
 
           VERSION="${{ inputs.version }}"
           BASELINE_DIR="HEMS/BASELINES/$VERSION"
-          RELEASE_DIR="baseline-selection     FOLDER_TREE_FILE="$BASELINE_DIR/baseline-folder-tree-$VERSION.md"
+          RELEASE_DIR="baseline-selection-$VERSION"
+          FOLDER_TREE_FILE="$BASELINE_DIR/baseline-folder-tree-$VERSION.md"
 
           mkdir -p "$BASELINE_DIR"
+          mkdir -p "$RELEASE_DIR"
 
           echo "Generating baseline folder tree preview..."
 
