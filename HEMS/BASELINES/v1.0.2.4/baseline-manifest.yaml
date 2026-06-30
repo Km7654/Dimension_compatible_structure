@@ -1,0 +1,91 @@
+baseline: v1.0.2.4
+delivery_cycle: MD31_02
+release_scope: spec_module
+selected_path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL
+release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+branch: main
+generated_by: GitHub Actions
+generated_on: 2026-06-30T07:57:43Z
+
+released_files:
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/comparison/CHEM_MAIN_CTL_comparison_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+    sha256: f766aaf0ceed68b9ab1b9cbfedc9787c5b93ea1f7f89e736cb10aaa6b4cfa367
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/crs/CHEM_MAIN_CTL_interface_spec.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+    sha256: eca67e90daa7dc7ec7711e09dd3a071c7f93b7b060fad5d3be076449fa1825a3
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/history/CHEM_MAIN_CTL_history_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+    sha256: 6623299b4e39bc9614e4c02d792ec2a279fbe59ce7bc75e7e1a697c1d85323c9
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/pdf/CHEM_MAIN_CTL_spec_document.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+    sha256: dbdead8e01d54b93430d0b681ff39f98bb76e356fa9390f6606b15bf4cf0322c
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/sdt/CHEM_MAIN_CTL_sdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+    sha256: 6f3f09c4bbdaebc6956f2469e6e6ebcfd6a66fd23c52cb03b5a867cba2ff6807
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/source/CHEM_MAIN_CTL_spec_source.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+    sha256: c5024c2369603627fe88c6e975406804c95c37d15ba27c5e7ab2d30f0a5fc615
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/spec-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: 979a81810dca68e982bf1ae74bae90ca8b946e5d
+    sha256: a2eb78546a0a44518c2ea792752aa747f647ccb938ff4077bd7c445aee2b66f2
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/technical-facts/CHEM_MAIN_CTL_technical_facts.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+    sha256: 20aeb2914d9c4ba7224a3cd4221a39045f40e014bc11dcb63b616659b5cf5126
+  - path: HEMS/SPEC_HEMS/CHEM/CHEM_MAIN/CHEM_MAIN_CTL/traceability/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    release_version: v1.0.2.4
+    release_commit: a9ab7ad07e9b483701b8cb60b8c8711636143dab
+    last_changed_commit: dec187c454dce94eb07224bec633e3eed87f9a2b
+    sha256: 3bda66b8619ff2d626d59eab2eef14139c79edf29f658f3d68fc274db10ca24a
