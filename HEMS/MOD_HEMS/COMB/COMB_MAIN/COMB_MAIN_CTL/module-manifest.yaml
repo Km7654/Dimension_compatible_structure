@@ -3,11 +3,11 @@ type: module
 area: MOD_HEMS
 function: COMB
 sub_function: COMB_MAIN
-version: v1.0.2.3
-delivery_cycle: MD31_02
-commit: 4f12e5c9e6612c7274274b4a3a271bd8b554f754
+version: v1.0.2.5
+delivery_cycle: MD31_01
+commit: a49def1c47bee6aaec2351093fe165884a503919
 generated_by: GitHub Actions
-generated_on: 2026-06-30T07:18:29Z
+generated_on: 2026-06-30T08:01:11Z
 files:
   - analysis/COMB_MAIN_CTL_analysis_report.txt
   - calibration/COMB_MAIN_CTL_calibration_file.a2l
