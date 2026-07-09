@@ -3,17 +3,13 @@ type: code
 area: CODE_HEMS
 function: ASXX
 sub_function: ASXX_ADMX
-version: v1.0.2.5
+version: v1.0.0
 delivery_cycle: MD31_01
-commit: a49def1c47bee6aaec2351093fe165884a503919
-generated_by: GitHub Actions
-generated_on: 2026-06-30T08:01:10Z
 files:
-  - certification/ASXX_ADMX_CTL_certification_report.txt
-  - include/main.h
-  - source/main.c
-  - static-analysis/ASXX_ADMX_CTL_lint_report.txt
-  - static-analysis/lint_report.txt
-  - traceability/trace_links.csv
-  - unit-sil-results/ASXX_ADMX_CTL_sil_results.txt
-  - unit-sil-results/sil_results.txt
+  - ASXX_ADMX_CTL.c
+  - ASXX_ADMX_CTL.h
+  - ASXX_ADMX_CTL_compiler_log.txt
+  - ASXX_ADMX_CTL_static_analysis_report.txt
+  - ASXX_ADMX_CTL_sil_results.txt
+  - ASXX_ADMX_CTL_certification_report.txt
+  - trace_links.csv

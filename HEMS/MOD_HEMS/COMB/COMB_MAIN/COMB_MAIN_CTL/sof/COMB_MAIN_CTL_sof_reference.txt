@@ -1,1 +1,0 @@
-SOF reference for COMB_MAIN_CTL

@@ -1,1 +1,0 @@
-SDT reference for SFTY_MAIN_CTL

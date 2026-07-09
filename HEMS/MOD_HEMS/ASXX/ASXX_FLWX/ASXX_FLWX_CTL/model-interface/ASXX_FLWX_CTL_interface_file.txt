@@ -1,1 +1,0 @@
-dummy model interface content for ASXX_FLWX_CTL

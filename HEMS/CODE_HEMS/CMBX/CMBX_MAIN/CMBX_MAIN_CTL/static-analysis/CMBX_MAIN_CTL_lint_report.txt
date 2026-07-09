@@ -1,1 +1,0 @@
-static analysis passed for CMBX_MAIN_CTL

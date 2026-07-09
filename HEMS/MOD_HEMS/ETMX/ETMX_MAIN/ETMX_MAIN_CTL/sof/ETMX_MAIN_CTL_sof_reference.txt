@@ -1,1 +1,0 @@
-SOF reference for ETMX_MAIN_CTL

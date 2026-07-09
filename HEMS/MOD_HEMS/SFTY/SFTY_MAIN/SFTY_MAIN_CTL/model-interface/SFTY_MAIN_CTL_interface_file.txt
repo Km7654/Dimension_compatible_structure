@@ -1,1 +1,0 @@
-dummy model interface content for SFTY_MAIN_CTL

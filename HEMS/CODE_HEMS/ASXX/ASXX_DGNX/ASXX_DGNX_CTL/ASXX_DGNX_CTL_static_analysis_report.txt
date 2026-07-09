@@ -1,0 +1,2 @@
+Static analysis report for ASXX_DGNX_CTL
+Status: PASS

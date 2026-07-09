@@ -3,21 +3,18 @@ type: module
 area: MOD_HEMS
 function: ASXX
 sub_function: ASXX_DGNX
-version: v1.0.2.5
+version: v1.0.0
 delivery_cycle: MD31_01
-commit: a49def1c47bee6aaec2351093fe165884a503919
-generated_by: GitHub Actions
-generated_on: 2026-06-30T08:01:10Z
 files:
-  - analysis/ASXX_DGNX_CTL_analysis_report.txt
-  - calibration/ASXX_DGNX_CTL_calibration_file.a2l
-  - delivery/ASXX_DGNX_CTL_delivery_package.zip
-  - dictionary/ASXX_DGNX_CTL_dictionary.sldd
-  - mdt/ASXX_DGNX_CTL_mdt_reference.txt
-  - model-interface/ASXX_DGNX_CTL_interface_file.txt
-  - model/ASXX_DGNX_CTL.slx
-  - reports/ASXX_DGNX_CTL_east_report.pdf
-  - sof/ASXX_DGNX_CTL_sof_reference.txt
-  - stimuli/ASXX_DGNX_CTL_test_stimuli.mat
-  - traceability/trace_links.csv
-  - variant/ASXX_DGNX_CTL_variant_list.csv
+  - ASXX_DGNX_CTL.slx
+  - ASXX_DGNX_CTL_dictionary.sldd
+  - ASXX_DGNX_CTL_interface.xlsx
+  - ASXX_DGNX_CTL_variant.xlsx
+  - ASXX_DGNX_CTL_stimuli.mat
+  - ASXX_DGNX_CTL_calibration.html
+  - ASXX_DGNX_CTL_analysis_report.txt
+  - ASXX_DGNX_CTL_east_report.pdf
+  - ASXX_DGNX_CTL_delivery_package.zip
+  - ASXX_DGNX_CTL_sof_reference.txt
+  - ASXX_DGNX_CTL_mdt_reference.txt
+  - trace_links.csv

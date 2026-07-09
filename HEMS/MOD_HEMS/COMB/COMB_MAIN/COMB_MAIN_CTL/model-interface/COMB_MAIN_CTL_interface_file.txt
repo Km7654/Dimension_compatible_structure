@@ -1,1 +1,0 @@
-dummy model interface content for COMB_MAIN_CTL
