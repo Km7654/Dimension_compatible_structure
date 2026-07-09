@@ -3,13 +3,16 @@ type: code
 area: CODE_HEMS
 function: ATXX
 sub_function: ATXX_MAIN
-version: v1.0.0
+version: v1.0.2.6
 delivery_cycle: MD31_01
+commit: 6ace9ae6b01c9924e046b86dfb4ba1a0960ae86e
+generated_by: GitHub Actions
+generated_on: 2026-07-09T08:52:00Z
 files:
   - ATXX_MAIN_CTL.c
   - ATXX_MAIN_CTL.h
-  - ATXX_MAIN_CTL_compiler_log.txt
-  - ATXX_MAIN_CTL_static_analysis_report.txt
-  - ATXX_MAIN_CTL_sil_results.txt
   - ATXX_MAIN_CTL_certification_report.txt
+  - ATXX_MAIN_CTL_compiler_log.txt
+  - ATXX_MAIN_CTL_sil_results.txt
+  - ATXX_MAIN_CTL_static_analysis_report.txt
   - trace_links.csv

@@ -3,14 +3,17 @@ type: specification
 area: SPEC_HEMS
 function: ASXX
 sub_function: ASXX_DGNX
-version: v1.0.0
+version: v1.0.2.6
 delivery_cycle: MD31_01
+commit: 6ace9ae6b01c9924e046b86dfb4ba1a0960ae86e
+generated_by: GitHub Actions
+generated_on: 2026-07-09T08:52:00Z
 files:
-  - ASXX_DGNX_CTL_spec_source.xml
-  - ASXX_DGNX_CTL_spec_document.pdf
   - ASXX_DGNX_CTL_comparison_report.txt
-  - ASXX_DGNX_CTL_history_log.txt
   - ASXX_DGNX_CTL_crs_interface.xml
-  - ASXX_DGNX_CTL_technical_fact_reference.txt
+  - ASXX_DGNX_CTL_history_log.txt
   - ASXX_DGNX_CTL_sdt_reference.txt
+  - ASXX_DGNX_CTL_spec_document.pdf
+  - ASXX_DGNX_CTL_spec_source.xml
+  - ASXX_DGNX_CTL_technical_fact_reference.txt
   - trace_links.csv

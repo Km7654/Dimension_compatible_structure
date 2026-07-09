@@ -3,18 +3,21 @@ type: module
 area: MOD_HEMS
 function: ATXX
 sub_function: ATXX_MAIN
-version: v1.0.0
+version: v1.0.2.6
 delivery_cycle: MD31_01
+commit: 6ace9ae6b01c9924e046b86dfb4ba1a0960ae86e
+generated_by: GitHub Actions
+generated_on: 2026-07-09T08:52:00Z
 files:
   - ATXX_MAIN_CTL.slx
-  - ATXX_MAIN_CTL_dictionary.sldd
-  - ATXX_MAIN_CTL_interface.xlsx
-  - ATXX_MAIN_CTL_variant.xlsx
-  - ATXX_MAIN_CTL_stimuli.mat
-  - ATXX_MAIN_CTL_calibration.html
   - ATXX_MAIN_CTL_analysis_report.txt
-  - ATXX_MAIN_CTL_east_report.pdf
+  - ATXX_MAIN_CTL_calibration.html
   - ATXX_MAIN_CTL_delivery_package.zip
-  - ATXX_MAIN_CTL_sof_reference.txt
+  - ATXX_MAIN_CTL_dictionary.sldd
+  - ATXX_MAIN_CTL_east_report.pdf
+  - ATXX_MAIN_CTL_interface.xlsx
   - ATXX_MAIN_CTL_mdt_reference.txt
+  - ATXX_MAIN_CTL_sof_reference.txt
+  - ATXX_MAIN_CTL_stimuli.mat
+  - ATXX_MAIN_CTL_variant.xlsx
   - trace_links.csv
