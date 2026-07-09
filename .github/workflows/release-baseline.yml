@@ -4,13 +4,39 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Release version, example: v1.0.0"
+        description: "Release version/tag, example: v1.0.0"
         required: true
         type: string
+
       delivery_cycle:
         description: "Delivery cycle, example: MD31_01"
         required: true
         default: "MD31_01"
+        type: string
+
+      release_scope:
+        description: "Choose release scope"
+        required: true
+        type: choice
+        options:
+          - full_hems
+          - spec_hems
+          - mod_hems
+          - code_hems
+          - function
+          - sub_function
+          - module
+          - item
+          - approved_custom_paths
+
+      selected_path:
+        description: "Required for function/sub_function/module/item. Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL"
+        required: false
+        type: string
+
+      approved_custom_paths:
+        description: "Only for approved_custom_paths. Comma-separated HEMS files/folders"
+        required: false
         type: string
 
 permissions:
@@ -41,7 +67,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-      - name: Validate release version does not already exist
+      - name: Validate inputs and release version
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -49,8 +75,13 @@ jobs:
           set -euo pipefail
 
           VERSION="${{ inputs.version }}"
+          SCOPE="${{ inputs.release_scope }}"
+          SELECTED_PATH="${{ inputs.selected_path }}"
+          CUSTOM_PATHS="${{ inputs.approved_custom_paths }}"
 
-          echo "Checking whether tag already exists: $VERSION"
+          echo "Version: $VERSION"
+          echo "Release scope: $SCOPE"
+          echo "Selected path: ${SELECTED_PATH:-not_applicable}"
 
           git fetch --tags
 
@@ -66,7 +97,74 @@ jobs:
             exit 1
           fi
 
-      - name: Generate code, module, and specification manifests
+          if [[ "$SCOPE" == "function" || "$SCOPE" == "sub_function" || "$SCOPE" == "module" || "$SCOPE" == "item" ]]; then
+            if [[ -z "$SELECTED_PATH" ]]; then
+              echo "ERROR: selected_path is required for scope $SCOPE."
+              exit 1
+            fi
+
+            if [[ "$SELECTED_PATH" != HEMS/* ]]; then
+              echo "ERROR: selected_path must be under HEMS."
+              echo "Use forward slashes, example: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL"
+              exit 1
+            fi
+
+            if [[ ! -e "$SELECTED_PATH" ]]; then
+              echo "ERROR: selected_path does not exist: $SELECTED_PATH"
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "function" ]]; then
+            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
+
+            if (( ${#parts[@]} != 3 )); then
+              echo "ERROR: function scope path must be HEMS/AREA/Function."
+              echo "Example: HEMS/MOD_HEMS/ASXX"
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "sub_function" ]]; then
+            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
+
+            if (( ${#parts[@]} != 4 )); then
+              echo "ERROR: sub_function scope path must be HEMS/AREA/Function/Sub-function."
+              echo "Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX"
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "module" ]]; then
+            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
+
+            if (( ${#parts[@]} != 5 )); then
+              echo "ERROR: module scope path must be HEMS/AREA/Function/Sub-function/Module."
+              echo "Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL"
+              exit 1
+            fi
+
+            if [[ ! -d "$SELECTED_PATH" ]]; then
+              echo "ERROR: module scope selected_path must be a folder."
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "item" ]]; then
+            if [[ ! -f "$SELECTED_PATH" ]]; then
+              echo "ERROR: item scope selected_path must be a file."
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "approved_custom_paths" ]]; then
+            if [[ -z "$CUSTOM_PATHS" ]]; then
+              echo "ERROR: approved_custom_paths is required for approved_custom_paths scope."
+              exit 1
+            fi
+          fi
+
+      - name: Generate package-level manifests
         shell: bash
         run: |
           set -euo pipefail
@@ -76,7 +174,7 @@ jobs:
           DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
           COMMIT_ID="${{ github.sha }}"
 
-          echo "Generating package manifests for version: $VERSION"
+          echo "Generating package-level manifests for version: $VERSION"
 
           generate_manifest() {
             local module_dir="$1"
@@ -106,8 +204,8 @@ jobs:
               echo "files:"
             } > "$manifest_file"
 
-            find "$module_dir" -type f ! -name "$(basename "$manifest_file")" | sort | while read -r file; do
-              relative_file="${file#"$module_dir/"}"
+            find "$module_dir" -maxdepth 1 -type f ! -name "$(basename "$manifest_file")" | sort | while read -r file; do
+              relative_file="$(basename "$file")"
               echo "  - $relative_file" >> "$manifest_file"
             done
           }
@@ -136,24 +234,125 @@ jobs:
             echo "WARNING: $HEMS_ROOT/SPEC_HEMS not found."
           fi
 
+      - name: Collect selected released files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.version }}"
+          SCOPE="${{ inputs.release_scope }}"
+          SELECTED_PATH="${{ inputs.selected_path }}"
+          CUSTOM_PATHS="${{ inputs.approved_custom_paths }}"
+
+          SELECTED_FILES="selected-files.txt"
+          RELEASE_DIR="baseline-selection-$VERSION"
+
+          rm -rf "$RELEASE_DIR"
+          mkdir -p "$RELEASE_DIR"
+          : > "$SELECTED_FILES"
+
+          echo "Collecting files for scope: $SCOPE"
+
+          case "$SCOPE" in
+            full_hems)
+              find HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
+
+            spec_hems)
+              find HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
+
+            mod_hems)
+              find HEMS/MOD_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
+
+            code_hems)
+              find HEMS/CODE_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
+
+            function)
+              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
+
+            sub_function)
+              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
+
+            module)
+              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
+
+            item)
+              echo "$SELECTED_PATH" > "$SELECTED_FILES"
+              ;;
+
+            approved_custom_paths)
+              echo "$CUSTOM_PATHS" | tr ',' '\n' | while read -r raw_path; do
+                clean_path="$(echo "$raw_path" | xargs)"
+
+                if [[ -z "$clean_path" ]]; then
+                  continue
+                fi
+
+                if [[ "$clean_path" != HEMS/* ]]; then
+                  echo "ERROR: Custom path must be under HEMS: $clean_path"
+                  exit 1
+                fi
+
+                if [[ -f "$clean_path" ]]; then
+                  echo "$clean_path" >> "$SELECTED_FILES"
+                elif [[ -d "$clean_path" ]]; then
+                  find "$clean_path" -type f 2>/dev/null | sort >> "$SELECTED_FILES"
+                else
+                  echo "ERROR: Custom path does not exist: $clean_path"
+                  exit 1
+                fi
+              done
+
+              sort -u "$SELECTED_FILES" -o "$SELECTED_FILES"
+              ;;
+          esac
+
+          grep -v "^HEMS/BASELINES/" "$SELECTED_FILES" > selected-files-clean.txt || true
+          grep -v "^HEMS/INCOMING/" selected-files-clean.txt > selected-files-clean-2.txt || true
+          grep -v "^HEMS/DELIVERY_REQUESTS/" selected-files-clean-2.txt > selected-files-clean-3.txt || true
+          mv selected-files-clean-3.txt "$SELECTED_FILES"
+          rm -f selected-files-clean.txt selected-files-clean-2.txt
+
+          if [[ ! -s "$SELECTED_FILES" ]]; then
+            echo "ERROR: No files selected for release."
+            exit 1
+          fi
+
+          echo "Selected files:"
+          cat "$SELECTED_FILES"
+
+          while IFS= read -r file; do
+            mkdir -p "$RELEASE_DIR/$(dirname "$file")"
+            cp "$file" "$RELEASE_DIR/$file"
+          done < "$SELECTED_FILES"
+
       - name: Generate baseline manifest with released files and versions
         shell: bash
         run: |
           set -euo pipefail
 
-          HEMS_ROOT="HEMS"
           VERSION="${{ inputs.version }}"
           DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
-          BASELINE_DIR="$HEMS_ROOT/BASELINES/$VERSION"
+          SCOPE="${{ inputs.release_scope }}"
+          SELECTED_PATH="${{ inputs.selected_path }}"
+
+          BASELINE_DIR="HEMS/BASELINES/$VERSION"
           BASELINE_MANIFEST="$BASELINE_DIR/baseline-manifest.yaml"
+          RELEASE_DIR="baseline-selection-$VERSION"
 
           mkdir -p "$BASELINE_DIR"
-
-          echo "Generating baseline manifest for release: $VERSION"
 
           {
             echo "baseline: $VERSION"
             echo "delivery_cycle: $DELIVERY_CYCLE"
+            echo "release_scope: $SCOPE"
+            echo "selected_path: ${SELECTED_PATH:-not_applicable}"
             echo "release_commit: ${{ github.sha }}"
             echo "branch: ${{ github.ref_name }}"
             echo "generated_by: GitHub Actions"
@@ -162,13 +361,14 @@ jobs:
             echo "released_files:"
           } > "$BASELINE_MANIFEST"
 
-          find "$HEMS_ROOT/CODE_HEMS" "$HEMS_ROOT/MOD_HEMS" "$HEMS_ROOT/SPEC_HEMS" -type f 2>/dev/null | sort | while read -r file; do
+          while IFS= read -r file; do
             IFS='/' read -r -a parts <<< "$file"
 
             area="${parts-unknown}"
             function_name="${parts-unknown}"
             sub_function="${parts-unknown}"
             module="${parts-unknown}"
+            item="${parts-$(basename "$file")}"
 
             file_hash="$(sha256sum "$file" | awk '{print $1}')"
             last_changed_commit="$(git log -n 1 --format="%H" -- "$file" || echo "unknown")"
@@ -179,37 +379,110 @@ jobs:
               echo "    function: $function_name"
               echo "    sub_function: $sub_function"
               echo "    module: $module"
+              echo "    item: $item"
               echo "    release_version: $VERSION"
               echo "    release_commit: ${{ github.sha }}"
               echo "    last_changed_commit: $last_changed_commit"
               echo "    sha256: $file_hash"
             } >> "$BASELINE_MANIFEST"
-          done
+          done < selected-files.txt
+
+          cp "$BASELINE_MANIFEST" "$RELEASE_DIR/baseline-manifest-$VERSION.yaml"
 
           echo "Baseline manifest generated:"
           cat "$BASELINE_MANIFEST"
 
-      - name: Generate checksums
+      - name: Generate folder structure preview
         shell: bash
         run: |
           set -euo pipefail
 
-          HEMS_ROOT="HEMS"
           VERSION="${{ inputs.version }}"
-          CHECKSUM_FILE="$HEMS_ROOT/BASELINES/$VERSION/checksums.sha256"
+          BASELINE_DIR="HEMS/BASELINES/$VERSION"
+          RELEASE_DIR="baseline-selection-$VERSION"
+          FOLDER_TREE_FILE="$BASELINE_DIR/baseline-folder-tree-$VERSION.md"
 
-          echo "Generating checksums..."
+          mkdir -p "$BASELINE_DIR"
+          mkdir -p "$RELEASE_DIR"
+
+          echo "Generating baseline folder tree preview..."
+
+          python3 << 'PYTHON_SCRIPT'
+          import os
+
+          version = os.environ["VERSION_VALUE"]
+          selected_files_path = "selected-files.txt"
+          output_file = os.environ["FOLDER_TREE_FILE_VALUE"]
+
+          tree = {}
+
+          with open(selected_files_path, "r", encoding="utf-8") as f:
+              files = [line.strip() for line in f if line.strip()]
+
+          for file_path in files:
+              parts = file_path.split("/")
+              current = tree
+              for part in parts:
+                  current = current.setdefault(part, {})
+
+          def render_tree(node, prefix=""):
+              lines = []
+              items = sorted(node.items())
+              for index, (name, child) in enumerate(items):
+                  connector = "└── " if index == len(items) - 1 else "├── "
+                  lines.append(prefix + connector + name)
+                  if child:
+                      extension = "    " if index == len(items) - 1 else "│   "
+                      lines.extend(render_tree(child, prefix + extension))
+              return lines
+
+          lines = []
+          lines.append(f"# Baseline Folder Structure - {version}")
+          lines.append("")
+          lines.append("This file shows the folder/file structure included in this baseline release.")
+          lines.append("")
+          lines.append("```text")
+          lines.extend(render_tree(tree))
+          lines.append("```")
+          lines.append("")
+          lines.append("## Total Released Files")
+          lines.append("")
+          lines.append(str(len(files)))
+
+          with open(output_file, "w", encoding="utf-8") as out:
+              out.write("\n".join(lines))
+          PYTHON_SCRIPT
+
+          cp "$FOLDER_TREE_FILE" "$RELEASE_DIR/baseline-folder-tree-$VERSION.md"
+
+          echo "Generated folder tree preview:"
+          cat "$FOLDER_TREE_FILE"
+        env:
+          VERSION_VALUE: ${{ inputs.version }}
+          FOLDER_TREE_FILE_VALUE: HEMS/BASELINES/${{ inputs.version }}/baseline-folder-tree-${{ inputs.version }}.md
+
+      - name: Generate checksum file
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="${{ inputs.version }}"
+          BASELINE_DIR="HEMS/BASELINES/$VERSION"
+          CHECKSUM_FILE="$BASELINE_DIR/checksums.sha256"
+          RELEASE_DIR="baseline-selection-$VERSION"
 
           : > "$CHECKSUM_FILE"
 
-          find "$HEMS_ROOT/CODE_HEMS" "$HEMS_ROOT/MOD_HEMS" "$HEMS_ROOT/SPEC_HEMS" -type f 2>/dev/null | sort | while read -r file; do
+          while IFS= read -r file; do
             sha256sum "$file" >> "$CHECKSUM_FILE"
-          done
+          done < selected-files.txt
 
-          echo "Checksums generated at: $CHECKSUM_FILE"
+          cp "$CHECKSUM_FILE" "$RELEASE_DIR/checksums-$VERSION.sha256"
+
+          echo "Checksums generated:"
           cat "$CHECKSUM_FILE"
 
-      - name: Commit generated manifests
+      - name: Commit generated baseline metadata
         shell: bash
         run: |
           set -euo pipefail
@@ -219,13 +492,13 @@ jobs:
           git add HEMS
 
           if git diff --cached --quiet; then
-            echo "No manifest changes to commit."
+            echo "No baseline metadata changes to commit."
           else
-            git commit -m "Generate release manifests for $VERSION"
+            git commit -m "Generate release baseline metadata for $VERSION"
             git push origin HEAD:${{ github.ref_name }}
           fi
 
-      - name: Refresh commit after manifest push
+      - name: Refresh commit after metadata push
         shell: bash
         run: |
           set -euo pipefail
@@ -233,53 +506,19 @@ jobs:
           git fetch origin "${{ github.ref_name }}"
           git reset --hard "origin/${{ github.ref_name }}"
 
-      - name: Create release packages
+      - name: Create release ZIP package
         shell: bash
         run: |
           set -euo pipefail
 
-          HEMS_ROOT="HEMS"
           VERSION="${{ inputs.version }}"
+          RELEASE_DIR="baseline-selection-$VERSION"
+          ZIP_FILE="baseline-$VERSION.zip"
 
-          mkdir -p release-assets/module-packages
-          mkdir -p release-assets/baseline
+          zip -r "$ZIP_FILE" "$RELEASE_DIR"
 
-          echo "Creating full release package..."
-          zip -r "release-assets/HEMS-full-release-$VERSION.zip" \
-            "$HEMS_ROOT/CODE_HEMS" \
-            "$HEMS_ROOT/MOD_HEMS" \
-            "$HEMS_ROOT/SPEC_HEMS" \
-            "$HEMS_ROOT/BASELINES/$VERSION"
-
-          echo "Creating code-level packages..."
-          if [[ -d "$HEMS_ROOT/CODE_HEMS" ]]; then
-            while IFS= read -r dir; do
-              module="$(basename "$dir")"
-              zip -r "release-assets/module-packages/code-${module}-$VERSION.zip" "$dir"
-            done < <(find "$HEMS_ROOT/CODE_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
-          fi
-
-          echo "Creating module-level packages..."
-          if [[ -d "$HEMS_ROOT/MOD_HEMS" ]]; then
-            while IFS= read -r dir; do
-              module="$(basename "$dir")"
-              zip -r "release-assets/module-packages/module-${module}-$VERSION.zip" "$dir"
-            done < <(find "$HEMS_ROOT/MOD_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
-          fi
-
-          echo "Creating specification-level packages..."
-          if [[ -d "$HEMS_ROOT/SPEC_HEMS" ]]; then
-            while IFS= read -r dir; do
-              module="$(basename "$dir")"
-              zip -r "release-assets/module-packages/spec-${module}-$VERSION.zip" "$dir"
-            done < <(find "$HEMS_ROOT/SPEC_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
-          fi
-
-          cp "$HEMS_ROOT/BASELINES/$VERSION/baseline-manifest.yaml" "release-assets/baseline/baseline-manifest-$VERSION.yaml"
-          cp "$HEMS_ROOT/BASELINES/$VERSION/checksums.sha256" "release-assets/baseline/checksums-$VERSION.sha256"
-
-          echo "Release assets created:"
-          find release-assets -type f | sort
+          echo "Created package:"
+          ls -lh "$ZIP_FILE"
 
       - name: Create Git tag
         shell: bash
@@ -298,6 +537,8 @@ jobs:
 
           VERSION="${{ inputs.version }}"
           DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
+          SCOPE="${{ inputs.release_scope }}"
+          SELECTED_PATH="${{ inputs.selected_path }}"
 
           {
             echo "# HEMS Baseline $VERSION"
@@ -305,18 +546,21 @@ jobs:
             echo "## Delivery Cycle"
             echo "$DELIVERY_CYCLE"
             echo ""
-            echo "## Included Content"
-            echo "- CODE_HEMS content"
-            echo "- MOD_HEMS content"
-            echo "- SPEC_HEMS content"
-            echo "- Code-level manifests"
-            echo "- Module-level manifests"
-            echo "- Specification-level manifests"
-            echo "- Baseline manifest with released files and versions"
-            echo "- Checksums"
+            echo "## Release Scope"
+            echo "$SCOPE"
             echo ""
-            echo "## Baseline Manifest"
-            echo "HEMS/BASELINES/$VERSION/baseline-manifest.yaml"
+            echo "## Selected Path"
+            echo "${SELECTED_PATH:-not_applicable}"
+            echo ""
+            echo "## Included Assets"
+            echo "- baseline-$VERSION.zip"
+            echo "- baseline-manifest-$VERSION.yaml"
+            echo "- checksums-$VERSION.sha256"
+            echo "- baseline-folder-tree-$VERSION.md"
+            echo ""
+            echo "## Folder Structure Preview"
+            echo ""
+            cat "HEMS/BASELINES/$VERSION/baseline-folder-tree-$VERSION.md"
             echo ""
             echo "## Generated By"
             echo "GitHub Actions"
@@ -334,9 +578,9 @@ jobs:
           VERSION="${{ inputs.version }}"
 
           gh release create "$VERSION" \
-            release-assets/*.zip \
-            release-assets/module-packages/*.zip \
-            release-assets/baseline/*.yaml \
-            release-assets/baseline/*.sha256 \
+            "baseline-$VERSION.zip" \
+            "baseline-selection-$VERSION/baseline-manifest-$VERSION.yaml" \
+            "baseline-selection-$VERSION/checksums-$VERSION.sha256" \
+            "baseline-selection-$VERSION/baseline-folder-tree-$VERSION.md" \
             --title "HEMS Baseline $VERSION" \
             --notes-file release-notes.md

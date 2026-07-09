@@ -6,6 +6,7 @@ on:
       - main
       - production
       - 'release/**'
+
   push:
     branches:
       - main
@@ -13,6 +14,7 @@ on:
       - 'release/**'
       - 'test/**'
       - 'feature/**'
+
   workflow_dispatch:
 
 jobs:
@@ -32,6 +34,9 @@ jobs:
           fail=0
 
           echo "Running delivery completeness check..."
+          echo "Expected structure:"
+          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Module>/<Items as direct files>"
+          echo ""
 
           check_file() {
             local file="$1"
@@ -43,28 +48,65 @@ jobs:
             fi
           }
 
-          check_dir() {
+          require_any_file() {
             local dir="$1"
             local message="$2"
+            shift 2
+            local patterns=("$@")
+            local found=0
 
-            if [[ ! -d "$dir" ]]; then
-              echo "::error::$message Missing folder: $dir"
+            for pattern in "${patterns[@]}"; do
+              if find "$dir" -maxdepth 1 -type f -iname "$pattern" | grep -q .; then
+                found=1
+                break
+              fi
+            done
+
+            if [[ "$found" -ne 1 ]]; then
+              echo "::error::$message Path: $dir"
+              echo "Expected one of these patterns:"
+              for pattern in "${patterns[@]}"; do
+                echo "  - $pattern"
+              done
               fail=1
             fi
           }
 
-          check_folder_has_real_file() {
+          reject_nested_folders() {
             local dir="$1"
             local message="$2"
 
-            if [[ ! -d "$dir" ]]; then
-              echo "::error::$message Missing folder: $dir"
+            if find "$dir" -mindepth 1 -maxdepth 1 -type d | grep -q .; then
+              echo "::error::$message Nested folders are not allowed under: $dir"
+              echo "Only direct item files are allowed inside the module folder."
+              echo "Nested folders found:"
+              find "$dir" -mindepth 1 -maxdepth 1 -type d | sort
+              fail=1
+            fi
+          }
+
+          check_trace_links() {
+            local trace_file="$1"
+            local message="$2"
+
+            if [[ ! -f "$trace_file" ]]; then
+              echo "::error::$message Missing traceability file: $trace_file"
               fail=1
               return
             fi
 
-            if ! find "$dir" -type f ! -name ".keep" | grep -q .; then
-              echo "::error::$message Folder has no required evidence file: $dir"
+            if ! head -n 1 "$trace_file" | grep -q "source,target"; then
+              echo "::error file=$trace_file::Traceability file must contain source,target header."
+              fail=1
+            fi
+          }
+
+          check_manifest_exists() {
+            local manifest_file="$1"
+            local message="$2"
+
+            if [[ ! -f "$manifest_file" ]]; then
+              echo "::error::$message Missing manifest: $manifest_file"
               fail=1
             fi
           }
@@ -73,116 +115,88 @@ jobs:
 
           if [[ -d "$HEMS_ROOT/CODE_HEMS" ]]; then
             while IFS= read -r code_dir; do
+              echo ""
               echo "Checking code package: $code_dir"
 
-              check_file "$code_dir/code-manifest.yaml" "Code manifest is required."
+              reject_nested_folders "$code_dir" "Invalid code package structure."
 
-              check_dir "$code_dir/source" "Code source folder is required."
-              check_dir "$code_dir/include" "Code include folder is required."
-              check_dir "$code_dir/static-analysis" "Static analysis folder is required."
-              check_dir "$code_dir/unit-sil-results" "Unit/SIL results folder is required."
-              check_dir "$code_dir/certification" "Certification folder is required."
-              check_dir "$code_dir/traceability" "Traceability folder is required."
+              check_manifest_exists "$code_dir/code-manifest.yaml" "Code manifest is required."
+              check_trace_links "$code_dir/trace_links.csv" "Code traceability file is required."
 
-              if ! find "$code_dir/source" -type f -name "*.c" | grep -q .; then
-                echo "::error::$code_dir must contain at least one .c file in source folder."
-                fail=1
-              fi
+              require_any_file "$code_dir" "At least one generated .c source file is required." "*.c"
+              require_any_file "$code_dir" "At least one generated .h header file is required." "*.h"
 
-              if ! find "$code_dir/include" -type f -name "*.h" | grep -q .; then
-                echo "::error::$code_dir must contain at least one .h file in include folder."
-                fail=1
-              fi
+              require_any_file "$code_dir" "Compiler log is required." "*compiler*log*" "*.log"
+              require_any_file "$code_dir" "Static analysis report is required." "*static*analysis*" "*lint*" "*mxam*"
+              require_any_file "$code_dir" "SIL or unit test output is required." "*sil*" "*unit*test*" "*unit*"
+              require_any_file "$code_dir" "Certification evidence is required." "*certification*" "*certificate*" "*cert*"
 
-              check_folder_has_real_file "$code_dir/static-analysis" "Static analysis evidence is required."
-              check_folder_has_real_file "$code_dir/unit-sil-results" "Unit/SIL result evidence is required."
-              check_folder_has_real_file "$code_dir/certification" "Certification evidence is required."
-
-              check_file "$code_dir/traceability/trace_links.csv" "Code traceability file is required."
-
-            done < <(find "$HEMS_ROOT/CODE_HEMS" -mindepth 3 -maxdepth 3 -type d)
+            done < <(find "$HEMS_ROOT/CODE_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
           else
             echo "::error::HEMS/CODE_HEMS folder is missing."
             fail=1
           fi
 
+          echo ""
           echo "Checking MOD_HEMS packages..."
 
           if [[ -d "$HEMS_ROOT/MOD_HEMS" ]]; then
             while IFS= read -r mod_dir; do
+              echo ""
               echo "Checking module package: $mod_dir"
 
-              check_file "$mod_dir/module-manifest.yaml" "Module manifest is required."
+              reject_nested_folders "$mod_dir" "Invalid module package structure."
 
-              check_dir "$mod_dir/model" "Model folder is required."
-              check_dir "$mod_dir/model-interface" "Model interface folder is required."
-              check_dir "$mod_dir/variant" "Variant folder is required."
-              check_dir "$mod_dir/dictionary" "Dictionary folder is required."
-              check_dir "$mod_dir/stimuli" "Stimuli folder is required."
-              check_dir "$mod_dir/calibration" "Calibration folder is required."
-              check_dir "$mod_dir/analysis" "Analysis folder is required."
-              check_dir "$mod_dir/reports" "Reports folder is required."
-              check_dir "$mod_dir/delivery" "Delivery folder is required."
-              check_dir "$mod_dir/sof" "SOF folder is required."
-              check_dir "$mod_dir/mdt" "MDT folder is required."
-              check_dir "$mod_dir/traceability" "Traceability folder is required."
+              check_manifest_exists "$mod_dir/module-manifest.yaml" "Module manifest is required."
+              check_trace_links "$mod_dir/trace_links.csv" "Module traceability file is required."
 
-              if ! find "$mod_dir/model" -type f -name "*.slx" | grep -q .; then
-                echo "::error::$mod_dir must contain at least one .slx file in model folder."
-                fail=1
-              fi
+              require_any_file "$mod_dir" "Simulink model file is required." "*.slx"
+              require_any_file "$mod_dir" "Dictionary file is required." "*.sldd"
+              require_any_file "$mod_dir" "Interface file is required." "*interface*.xlsx" "*interface*.xml" "*interface*.txt"
+              require_any_file "$mod_dir" "Variant file is required." "*variant*.xlsx" "*variant*.txt" "*variant*.slx"
+              require_any_file "$mod_dir" "Stimuli or test input file is required." "*.mat" "*stimuli*" "*test*input*" "*.csv" "*.xlsx"
+              require_any_file "$mod_dir" "Calibration file or calibration evidence is required." "*calibration*" "*.a2l" "*.html"
+              require_any_file "$mod_dir" "Analysis evidence is required." "*analysis*"
+              require_any_file "$mod_dir" "EAST or module report evidence is required." "*east*" "*report*" "*.pdf"
+              require_any_file "$mod_dir" "Delivery package or delivery evidence is required." "*delivery*" "*.zip"
+              require_any_file "$mod_dir" "SOF reference is required." "*sof*"
+              require_any_file "$mod_dir" "MDT reference is required." "*mdt*"
 
-              check_folder_has_real_file "$mod_dir/reports" "Module report evidence is required."
-              check_folder_has_real_file "$mod_dir/analysis" "Module analysis evidence is required."
-              check_folder_has_real_file "$mod_dir/delivery" "Module delivery evidence is required."
-              check_folder_has_real_file "$mod_dir/sof" "SOF reference is required."
-              check_folder_has_real_file "$mod_dir/mdt" "MDT reference is required."
-
-              check_file "$mod_dir/traceability/trace_links.csv" "Module traceability file is required."
-
-            done < <(find "$HEMS_ROOT/MOD_HEMS" -mindepth 3 -maxdepth 3 -type d)
+            done < <(find "$HEMS_ROOT/MOD_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
           else
             echo "::error::HEMS/MOD_HEMS folder is missing."
             fail=1
           fi
 
+          echo ""
           echo "Checking SPEC_HEMS packages..."
 
           if [[ -d "$HEMS_ROOT/SPEC_HEMS" ]]; then
             while IFS= read -r spec_dir; do
+              echo ""
               echo "Checking specification package: $spec_dir"
 
-              check_file "$spec_dir/spec-manifest.yaml" "Specification manifest is required."
+              reject_nested_folders "$spec_dir" "Invalid specification package structure."
 
-              check_dir "$spec_dir/source" "Specification source folder is required."
-              check_dir "$spec_dir/pdf" "Specification PDF folder is required."
-              check_dir "$spec_dir/comparison" "Comparison folder is required."
-              check_dir "$spec_dir/history" "History folder is required."
-              check_dir "$spec_dir/crs" "CRS folder is required."
-              check_dir "$spec_dir/sdt" "SDT folder is required."
-              check_dir "$spec_dir/technical-facts" "Technical facts folder is required."
-              check_dir "$spec_dir/traceability" "Traceability folder is required."
+              check_manifest_exists "$spec_dir/spec-manifest.yaml" "Specification manifest is required."
+              check_trace_links "$spec_dir/trace_links.csv" "Specification traceability file is required."
 
-              if ! find "$spec_dir/pdf" -type f -name "*.pdf" | grep -q .; then
-                echo "::error::$spec_dir must contain at least one .pdf file in pdf folder."
-                fail=1
-              fi
+              require_any_file "$spec_dir" "Specification source file is required." "*source*" "*.xml" "*.xlsx" "*.txt"
+              require_any_file "$spec_dir" "Specification PDF file is required." "*.pdf"
+              require_any_file "$spec_dir" "Comparison report is required." "*comparison*"
+              require_any_file "$spec_dir" "History file is required." "*history*"
+              require_any_file "$spec_dir" "CRS or interface specification file is required." "*crs*" "*interface*"
+              require_any_file "$spec_dir" "SDT reference is required." "*sdt*"
+              require_any_file "$spec_dir" "Technical Fact reference is required." "*technical*fact*" "*tf*"
 
-              check_folder_has_real_file "$spec_dir/source" "Specification source file is required."
-              check_folder_has_real_file "$spec_dir/comparison" "Comparison report is required."
-              check_folder_has_real_file "$spec_dir/history" "Specification history file is required."
-              check_folder_has_real_file "$spec_dir/crs" "CRS/interface file is required."
-              check_folder_has_real_file "$spec_dir/sdt" "SDT reference is required."
-              check_folder_has_real_file "$spec_dir/technical-facts" "Technical facts file is required."
-
-              check_file "$spec_dir/traceability/trace_links.csv" "Specification traceability file is required."
-
-            done < <(find "$HEMS_ROOT/SPEC_HEMS" -mindepth 3 -maxdepth 3 -type d)
+            done < <(find "$HEMS_ROOT/SPEC_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
           else
             echo "::error::HEMS/SPEC_HEMS folder is missing."
             fail=1
           fi
 
+          echo ""
+          echo "Delivery check summary:"
           if [[ "$fail" -ne 0 ]]; then
             echo "Delivery check failed."
             exit 1

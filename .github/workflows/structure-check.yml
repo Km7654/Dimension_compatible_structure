@@ -6,6 +6,7 @@ on:
       - main
       - production
       - 'release/**'
+
   push:
     branches:
       - main
@@ -13,6 +14,7 @@ on:
       - 'release/**'
       - 'test/**'
       - 'feature/**'
+
   workflow_dispatch:
 
 jobs:
@@ -44,13 +46,13 @@ jobs:
           if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
             git ls-files > changed_files.txt
           else
-            git diff --name-only --diff-filter=ACMRD "$BASE_SHA" "$HEAD_SHA" > changed_files.txt || true
+            git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" > changed_files.txt || true
           fi
 
           echo "Changed files:"
           cat changed_files.txt || true
 
-      - name: Validate folder structure under HEMS only
+      - name: Validate folder structure under HEMS
         shell: bash
         run: |
           set -euo pipefail
@@ -59,131 +61,175 @@ jobs:
           fail=0
           checked_hems_files=0
 
-          SPEC_ALLOWED=("source" "pdf" "comparison" "history" "crs" "sdt" "technical-facts" "traceability")
-          MOD_ALLOWED=("model" "model-interface" "variant" "dictionary" "stimuli" "calibration" "analysis" "reports" "delivery" "sof" "mdt" "traceability")
-          CODE_ALLOWED=("source" "include" "static-analysis" "unit-sil-results" "certification" "traceability")
+          echo "Running HEMS structure check..."
+          echo "Expected controlled structure:"
+          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Module>/<Item>"
+          echo ""
 
-          contains() {
-            local seeking="$1"; shift
-            for item in "$@"; do
-              [[ "$item" == "$seeking" ]] && return 0
-            done
-            return 1
+          is_supported_spec_item() {
+            local item="$1"
+
+            case "$item" in
+              spec-manifest.yaml) return 0 ;;
+              trace_links.csv) return 0 ;;
+              *.xml) return 0 ;;
+              *.pdf) return 0 ;;
+              *.txt) return 0 ;;
+              *.csv) return 0 ;;
+              *.xlsx) return 0 ;;
+              *.html) return 0 ;;
+              *.md) return 0 ;;
+              *.json) return 0 ;;
+              *.yaml) return 0 ;;
+              *.yml) return 0 ;;
+              *.docx) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          is_supported_mod_item() {
+            local item="$1"
+
+            case "$item" in
+              module-manifest.yaml) return 0 ;;
+              trace_links.csv) return 0 ;;
+              *.slx) return 0 ;;
+              *.mdl) return 0 ;;
+              *.sldd) return 0 ;;
+              *.mat) return 0 ;;
+              *.m) return 0 ;;
+              *.mldatx) return 0 ;;
+              *.xlsx) return 0 ;;
+              *.csv) return 0 ;;
+              *.html) return 0 ;;
+              *.pdf) return 0 ;;
+              *.txt) return 0 ;;
+              *.xml) return 0 ;;
+              *.zip) return 0 ;;
+              *.a2l) return 0 ;;
+              *.json) return 0 ;;
+              *.yaml) return 0 ;;
+              *.yml) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          is_supported_code_item() {
+            local item="$1"
+
+            case "$item" in
+              code-manifest.yaml) return 0 ;;
+              trace_links.csv) return 0 ;;
+              *.c) return 0 ;;
+              *.h) return 0 ;;
+              *.cpp) return 0 ;;
+              *.hpp) return 0 ;;
+              *.txt) return 0 ;;
+              *.csv) return 0 ;;
+              *.html) return 0 ;;
+              *.pdf) return 0 ;;
+              *.log) return 0 ;;
+              *.xml) return 0 ;;
+              *.json) return 0 ;;
+              *.yaml) return 0 ;;
+              *.yml) return 0 ;;
+              *) return 1 ;;
+            esac
           }
 
           while IFS= read -r file; do
             [[ -z "$file" ]] && continue
 
-            # IMPORTANT:
-            # Ignore all files outside HEMS.
-            # Example: dummy.sh, README.md, .gitignore, .github/workflows/*.yml
-            # These files will not be validated by this workflow.
             if [[ "$file" != "$HEMS_ROOT/"* ]]; then
               echo "Skipping non-HEMS file: $file"
+              continue
+            fi
+
+            # Allowed support areas under HEMS.
+            # These are not validated as controlled engineering package content.
+            if [[ "$file" == "$HEMS_ROOT/BASELINES/"* ]] || \
+               [[ "$file" == "$HEMS_ROOT/DELIVERY_REQUESTS/"* ]] || \
+               [[ "$file" == "$HEMS_ROOT/INCOMING/"* ]] || \
+               [[ "$file" == "$HEMS_ROOT/README.md" ]] || \
+               [[ "$file" == "$HEMS_ROOT/CODEOWNERS" ]] || \
+               [[ "$file" == "$HEMS_ROOT/.gitignore" ]] || \
+               [[ "$file" == "$HEMS_ROOT/.gitattributes" ]]; then
+              echo "Skipping allowed support path: $file"
+              continue
+            fi
+
+            if [[ "$(basename "$file")" == ".keep" ]]; then
+              echo "Skipping placeholder file: $file"
               continue
             fi
 
             echo "Checking HEMS file: $file"
             checked_hems_files=$((checked_hems_files + 1))
 
-            # Allow HEMS root-level support files if they exist
-            if [[ "$file" == "$HEMS_ROOT/README.md" ]] || \
-               [[ "$file" == "$HEMS_ROOT/CODEOWNERS" ]] || \
-               [[ "$file" == "$HEMS_ROOT/.gitignore" ]] || \
-               [[ "$file" == "$HEMS_ROOT/.gitattributes" ]] || \
-               [[ "$file" == "$HEMS_ROOT/BASELINES/"* ]]; then
-              continue
-            fi
-
             IFS='/' read -r -a parts <<< "$file"
 
-            # Must start with HEMS
-            if [[ "${parts[0]}" != "$HEMS_ROOT" ]]; then
-              echo "::error file=$file::File must be under HEMS."
-              fail=1
-              continue
-            fi
-
-            # Must have at least HEMS/AREA
-            if (( ${#parts[@]} < 2 )); then
-              echo "::error file=$file::Invalid path under HEMS."
-              fail=1
-              continue
-            fi
-
-            area="${parts[1]}"
-
-            # Must be inside one of the managed areas
-            if [[ "$area" != "SPEC_HEMS" && "$area" != "MOD_HEMS" && "$area" != "CODE_HEMS" ]]; then
-              echo "::error file=$file::File is outside SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
-              fail=1
-              continue
-            fi
-
-            # Required path:
+            # Required final structure:
             # HEMS / AREA / Function / Sub-function / Module / Item
-            if (( ${#parts[@]} < 6 )); then
-              echo "::error file=$file::Path must follow HEMS/AREA/Function/Sub-function/Module/Item."
+            if (( ${#parts[@]} != 6 )); then
+              echo "::error file=$file::Invalid structure. Path must be exactly HEMS/AREA/Function/Sub-function/Module/Item. Nested item folders are not allowed."
               fail=1
               continue
             fi
 
-            module_child="${parts[5]}"
+            root="${parts[0]}"
+            area="${parts[1]}"
+            function_name="${parts[2]}"
+            sub_function="${parts[3]}"
+            module="${parts[4]}"
+            item="${parts[5]}"
+
+            if [[ "$root" != "$HEMS_ROOT" ]]; then
+              echo "::error file=$file::Path must start with HEMS."
+              fail=1
+              continue
+            fi
+
+            if [[ "$area" != "SPEC_HEMS" && "$area" != "MOD_HEMS" && "$area" != "CODE_HEMS" ]]; then
+              echo "::error file=$file::Area must be SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
+              fail=1
+              continue
+            fi
+
+            if [[ -z "$function_name" || -z "$sub_function" || -z "$module" || -z "$item" ]]; then
+              echo "::error file=$file::Function, Sub-function, Module, and Item must not be empty."
+              fail=1
+              continue
+            fi
 
             case "$area" in
               SPEC_HEMS)
-                if [[ "$module_child" == "spec-manifest.yaml" ]]; then
-                  :
-                elif ! contains "$module_child" "${SPEC_ALLOWED[@]}"; then
-                  echo "::error file=$file::Invalid SPEC_HEMS folder or file: $module_child"
+                if ! is_supported_spec_item "$item"; then
+                  echo "::error file=$file::Unsupported SPEC_HEMS item type: $item"
                   fail=1
                   continue
-                fi
-
-                if [[ "$file" == *.pdf && "$module_child" != "pdf" ]]; then
-                  echo "::error file=$file::PDF files must be inside SPEC_HEMS/.../pdf/"
-                  fail=1
                 fi
                 ;;
 
               MOD_HEMS)
-                if [[ "$module_child" == "module-manifest.yaml" ]]; then
-                  :
-                elif ! contains "$module_child" "${MOD_ALLOWED[@]}"; then
-                  echo "::error file=$file::Invalid MOD_HEMS folder or file: $module_child"
+                if ! is_supported_mod_item "$item"; then
+                  echo "::error file=$file::Unsupported MOD_HEMS item type: $item"
                   fail=1
                   continue
-                fi
-
-                if [[ "$file" == *.slx && "$module_child" != "model" ]]; then
-                  echo "::error file=$file::.slx files must be inside MOD_HEMS/.../model/"
-                  fail=1
                 fi
                 ;;
 
               CODE_HEMS)
-                if [[ "$module_child" == "code-manifest.yaml" ]]; then
-                  :
-                elif ! contains "$module_child" "${CODE_ALLOWED[@]}"; then
-                  echo "::error file=$file::Invalid CODE_HEMS folder or file: $module_child"
+                if ! is_supported_code_item "$item"; then
+                  echo "::error file=$file::Unsupported CODE_HEMS item type: $item"
                   fail=1
                   continue
-                fi
-
-                if [[ "$file" == *.c && "$module_child" != "source" ]]; then
-                  echo "::error file=$file::.c files must be inside CODE_HEMS/.../source/"
-                  fail=1
-                fi
-
-                if [[ "$file" == *.h && "$module_child" != "include" ]]; then
-                  echo "::error file=$file::.h files must be inside CODE_HEMS/.../include/"
-                  fail=1
                 fi
                 ;;
             esac
 
           done < changed_files.txt
 
+          echo ""
           echo "Total HEMS files checked: $checked_hems_files"
 
           if [[ "$fail" -ne 0 ]]; then

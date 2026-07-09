@@ -20,13 +20,17 @@ on:
         type: choice
         options:
           - full_hems
-          - code_module
-          - model_module
-          - spec_module
+          - spec_hems
+          - mod_hems
+          - code_hems
+          - function
+          - sub_function
+          - module
+          - item
           - approved_custom_paths
 
       selected_path:
-        description: "Required for code_module/model_module/spec_module. Example: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL"
+        description: "Required for function/sub_function/module/item. Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL"
         required: false
         type: string
 
@@ -77,6 +81,7 @@ jobs:
 
           echo "Version: $VERSION"
           echo "Release scope: $SCOPE"
+          echo "Selected path: ${SELECTED_PATH:-not_applicable}"
 
           git fetch --tags
 
@@ -92,7 +97,7 @@ jobs:
             exit 1
           fi
 
-          if [[ "$SCOPE" == "code_module" || "$SCOPE" == "model_module" || "$SCOPE" == "spec_module" ]]; then
+          if [[ "$SCOPE" == "function" || "$SCOPE" == "sub_function" || "$SCOPE" == "module" || "$SCOPE" == "item" ]]; then
             if [[ -z "$SELECTED_PATH" ]]; then
               echo "ERROR: selected_path is required for scope $SCOPE."
               exit 1
@@ -104,8 +109,60 @@ jobs:
               exit 1
             fi
 
+            if [[ ! -e "$SELECTED_PATH" ]]; then
+              echo "ERROR: selected_path does not exist: $SELECTED_PATH"
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "function" ]]; then
+            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
+
+            if (( ${#parts[@]} != 3 )); then
+              echo "ERROR: function scope path must be HEMS/AREA/Function."
+              echo "Example: HEMS/MOD_HEMS/ASXX"
+              exit 1
+            fi
+
+            if [[ "${parts[1]}" != "SPEC_HEMS" && "${parts[1]}" != "MOD_HEMS" && "${parts[1]}" != "CODE_HEMS" ]]; then
+              echo "ERROR: function scope must be under SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "sub_function" ]]; then
+            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
+
+            if (( ${#parts[@]} != 4 )); then
+              echo "ERROR: sub_function scope path must be HEMS/AREA/Function/Sub-function."
+              echo "Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX"
+              exit 1
+            fi
+
+            if [[ "${parts[1]}" != "SPEC_HEMS" && "${parts[1]}" != "MOD_HEMS" && "${parts[1]}" != "CODE_HEMS" ]]; then
+              echo "ERROR: sub_function scope must be under SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "module" ]]; then
+            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
+
+            if (( ${#parts[@]} != 5 )); then
+              echo "ERROR: module scope path must be HEMS/AREA/Function/Sub-function/Module."
+              echo "Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL"
+              exit 1
+            fi
+
             if [[ ! -d "$SELECTED_PATH" ]]; then
-              echo "ERROR: selected_path does not exist or is not a folder: $SELECTED_PATH"
+              echo "ERROR: module scope selected_path must be a folder."
+              exit 1
+            fi
+          fi
+
+          if [[ "$SCOPE" == "item" ]]; then
+            if [[ ! -f "$SELECTED_PATH" ]]; then
+              echo "ERROR: item scope selected_path must be a file."
               exit 1
             fi
           fi
@@ -157,8 +214,8 @@ jobs:
               echo "files:"
             } > "$manifest_file"
 
-            find "$module_dir" -type f ! -name "$(basename "$manifest_file")" | sort | while read -r file; do
-              relative_file="${file#"$module_dir/"}"
+            find "$module_dir" -maxdepth 1 -type f ! -name "$(basename "$manifest_file")" | sort | while read -r file; do
+              relative_file="$(basename "$file")"
               echo "  - $relative_file" >> "$manifest_file"
             done
           }
@@ -200,59 +257,71 @@ jobs:
 
           echo "Collecting files for scope: $SCOPE"
 
-          if [[ "$SCOPE" == "full_hems" ]]; then
-            find HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
-          fi
+          case "$SCOPE" in
+            full_hems)
+              find HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
 
-          if [[ "$SCOPE" == "code_module" ]]; then
-            if [[ "$SELECTED_PATH" != HEMS/CODE_HEMS/* ]]; then
-              echo "ERROR: code_module scope requires selected_path under HEMS/CODE_HEMS."
-              exit 1
-            fi
-            find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
-          fi
+            spec_hems)
+              find HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
 
-          if [[ "$SCOPE" == "model_module" ]]; then
-            if [[ "$SELECTED_PATH" != HEMS/MOD_HEMS/* ]]; then
-              echo "ERROR: model_module scope requires selected_path under HEMS/MOD_HEMS."
-              exit 1
-            fi
-            find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
-          fi
+            mod_hems)
+              find HEMS/MOD_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
 
-          if [[ "$SCOPE" == "spec_module" ]]; then
-            if [[ "$SELECTED_PATH" != HEMS/SPEC_HEMS/* ]]; then
-              echo "ERROR: spec_module scope requires selected_path under HEMS/SPEC_HEMS."
-              exit 1
-            fi
-            find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
-          fi
+            code_hems)
+              find HEMS/CODE_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
 
-          if [[ "$SCOPE" == "approved_custom_paths" ]]; then
-            echo "$CUSTOM_PATHS" | tr ',' '\n' | while read -r raw_path; do
-              clean_path="$(echo "$raw_path" | xargs)"
+            function)
+              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
 
-              if [[ -z "$clean_path" ]]; then
-                continue
-              fi
+            sub_function)
+              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
 
-              if [[ "$clean_path" != HEMS/* ]]; then
-                echo "ERROR: Custom path must be under HEMS: $clean_path"
-                exit 1
-              fi
+            module)
+              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
+              ;;
 
-              if [[ -f "$clean_path" ]]; then
-                echo "$clean_path" >> "$SELECTED_FILES"
-              elif [[ -d "$clean_path" ]]; then
-                find "$clean_path" -type f 2>/dev/null | sort >> "$SELECTED_FILES"
-              else
-                echo "ERROR: Custom path does not exist: $clean_path"
-                exit 1
-              fi
-            done
+            item)
+              echo "$SELECTED_PATH" > "$SELECTED_FILES"
+              ;;
 
-            sort -u "$SELECTED_FILES" -o "$SELECTED_FILES"
-          fi
+            approved_custom_paths)
+              echo "$CUSTOM_PATHS" | tr ',' '\n' | while read -r raw_path; do
+                clean_path="$(echo "$raw_path" | xargs)"
+
+                if [[ -z "$clean_path" ]]; then
+                  continue
+                fi
+
+                if [[ "$clean_path" != HEMS/* ]]; then
+                  echo "ERROR: Custom path must be under HEMS: $clean_path"
+                  exit 1
+                fi
+
+                if [[ -f "$clean_path" ]]; then
+                  echo "$clean_path" >> "$SELECTED_FILES"
+                elif [[ -d "$clean_path" ]]; then
+                  find "$clean_path" -type f 2>/dev/null | sort >> "$SELECTED_FILES"
+                else
+                  echo "ERROR: Custom path does not exist: $clean_path"
+                  exit 1
+                fi
+              done
+
+              sort -u "$SELECTED_FILES" -o "$SELECTED_FILES"
+              ;;
+          esac
+
+          grep -v "^HEMS/BASELINES/" "$SELECTED_FILES" > selected-files-clean.txt || true
+          grep -v "^HEMS/INCOMING/" selected-files-clean.txt > selected-files-clean-2.txt || true
+          grep -v "^HEMS/DELIVERY_REQUESTS/" selected-files-clean-2.txt > selected-files-clean-3.txt || true
+          mv selected-files-clean-3.txt "$SELECTED_FILES"
+          rm -f selected-files-clean.txt selected-files-clean-2.txt
 
           if [[ ! -s "$SELECTED_FILES" ]]; then
             echo "ERROR: No files selected for release."
@@ -303,6 +372,7 @@ jobs:
             function_name="${parts-unknown}"
             sub_function="${parts-unknown}"
             module="${parts-unknown}"
+            item="${parts-$(basename "$file")}"
 
             file_hash="$(sha256sum "$file" | awk '{print $1}')"
             last_changed_commit="$(git log -n 1 --format="%H" -- "$file" || echo "unknown")"
@@ -313,6 +383,7 @@ jobs:
               echo "    function: $function_name"
               echo "    sub_function: $sub_function"
               echo "    module: $module"
+              echo "    item: $item"
               echo "    release_version: $VERSION"
               echo "    release_commit: ${{ github.sha }}"
               echo "    last_changed_commit: $last_changed_commit"
@@ -471,6 +542,7 @@ jobs:
           VERSION="${{ inputs.version }}"
           DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
           SCOPE="${{ inputs.release_scope }}"
+          SELECTED_PATH="${{ inputs.selected_path }}"
 
           {
             echo "# HEMS Baseline $VERSION"
@@ -480,6 +552,9 @@ jobs:
             echo ""
             echo "## Release Scope"
             echo "$SCOPE"
+            echo ""
+            echo "## Selected Path"
+            echo "${SELECTED_PATH:-not_applicable}"
             echo ""
             echo "## Included Assets"
             echo "- baseline-$VERSION.zip"

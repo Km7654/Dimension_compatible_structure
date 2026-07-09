@@ -6,6 +6,7 @@ on:
       - main
       - production
       - 'release/**'
+
   push:
     branches:
       - main
@@ -13,6 +14,7 @@ on:
       - 'release/**'
       - 'test/**'
       - 'feature/**'
+
   workflow_dispatch:
 
 jobs:
@@ -32,50 +34,148 @@ jobs:
           fail=0
 
           echo "Running traceability check..."
+          echo "Expected structure:"
+          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Module>/<direct item files>"
+          echo ""
 
           check_manifest_field() {
             local file="$1"
             local field="$2"
 
             if ! grep -q "^$field:" "$file"; then
-              echo "::error file=$file::Missing required field: $field"
+              echo "::error file=$file::Missing required manifest field: $field"
               fail=1
             fi
           }
 
           check_trace_file() {
-            local dir="$1"
+            local package_dir="$1"
+            local trace_file="$package_dir/trace_links.csv"
 
-            if [[ ! -f "$dir/traceability/trace_links.csv" ]]; then
-              echo "::error::$dir must contain traceability/trace_links.csv"
+            if [[ ! -f "$trace_file" ]]; then
+              echo "::error::$package_dir must contain trace_links.csv directly under the package folder."
               fail=1
               return
             fi
 
-            if ! grep -q "source,target" "$dir/traceability/trace_links.csv"; then
-              echo "::error file=$dir/traceability/trace_links.csv::Trace file must contain source,target header."
+            if ! head -n 1 "$trace_file" | grep -q "source,target"; then
+              echo "::error file=$trace_file::Traceability file must contain source,target header."
               fail=1
             fi
           }
 
-          # Check code manifests
-          while IFS= read -r manifest; do
+          check_manifest_file_entries_exist() {
+            local manifest="$1"
+            local package_dir="$2"
+            local inside_files_section=0
+
+            while IFS= read -r line; do
+              if [[ "$line" == "files:" ]]; then
+                inside_files_section=1
+                continue
+              fi
+
+              if [[ "$inside_files_section" -eq 1 ]]; then
+                if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+(.+)$ ]]; then
+                  listed_file="${BASH_REMATCH[1]}"
+
+                  # Remove optional quotes
+                  listed_file="${listed_file%\"}"
+                  listed_file="${listed_file#\"}"
+                  listed_file="${listed_file%\'}"
+                  listed_file="${listed_file#\'}"
+
+                  if [[ ! -f "$package_dir/$listed_file" ]]; then
+                    echo "::error file=$manifest::Manifest lists missing file: $listed_file"
+                    fail=1
+                  fi
+                fi
+              fi
+            done < "$manifest"
+          }
+
+          validate_manifest() {
+            local manifest="$1"
+            local expected_area="$2"
+
             echo "Checking manifest: $manifest"
+
             check_manifest_field "$manifest" "module"
             check_manifest_field "$manifest" "type"
+            check_manifest_field "$manifest" "area"
+            check_manifest_field "$manifest" "function"
+            check_manifest_field "$manifest" "sub_function"
             check_manifest_field "$manifest" "version"
             check_manifest_field "$manifest" "delivery_cycle"
-          done < <(find "$HEMS_ROOT" -type f \( -name "code-manifest.yaml" -o -name "module-manifest.yaml" -o -name "spec-manifest.yaml" \))
+            check_manifest_field "$manifest" "files"
 
-          # Check traceability files per package folder
-          for area in CODE_HEMS MOD_HEMS SPEC_HEMS; do
-            if [[ -d "$HEMS_ROOT/$area" ]]; then
-              while IFS= read -r module_dir; do
-                echo "Checking traceability for: $module_dir"
-                check_trace_file "$module_dir"
-              done < <(find "$HEMS_ROOT/$area" -mindepth 3 -maxdepth 3 -type d)
+            if ! grep -q "^area: $expected_area" "$manifest"; then
+              echo "::error file=$manifest::Manifest area must be $expected_area."
+              fail=1
             fi
-          done
+
+            package_dir="$(dirname "$manifest")"
+            check_manifest_file_entries_exist "$manifest" "$package_dir"
+          }
+
+          echo "Checking CODE_HEMS manifests and traceability..."
+
+          if [[ -d "$HEMS_ROOT/CODE_HEMS" ]]; then
+            while IFS= read -r code_dir; do
+              manifest="$code_dir/code-manifest.yaml"
+
+              if [[ ! -f "$manifest" ]]; then
+                echo "::error::$code_dir must contain code-manifest.yaml"
+                fail=1
+              else
+                validate_manifest "$manifest" "CODE_HEMS"
+              fi
+
+              check_trace_file "$code_dir"
+
+            done < <(find "$HEMS_ROOT/CODE_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
+          fi
+
+          echo ""
+          echo "Checking MOD_HEMS manifests and traceability..."
+
+          if [[ -d "$HEMS_ROOT/MOD_HEMS" ]]; then
+            while IFS= read -r mod_dir; do
+              manifest="$mod_dir/module-manifest.yaml"
+
+              if [[ ! -f "$manifest" ]]; then
+                echo "::error::$mod_dir must contain module-manifest.yaml"
+                fail=1
+              else
+                validate_manifest "$manifest" "MOD_HEMS"
+              fi
+
+              check_trace_file "$mod_dir"
+
+            done < <(find "$HEMS_ROOT/MOD_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
+          fi
+
+          echo ""
+          echo "Checking SPEC_HEMS manifests and traceability..."
+
+          if [[ -d "$HEMS_ROOT/SPEC_HEMS" ]]; then
+            while IFS= read -r spec_dir; do
+              manifest="$spec_dir/spec-manifest.yaml"
+
+              if [[ ! -f "$manifest" ]]; then
+                echo "::error::$spec_dir must contain spec-manifest.yaml"
+                fail=1
+              else
+                validate_manifest "$manifest" "SPEC_HEMS"
+              fi
+
+              check_trace_file "$spec_dir"
+
+            done < <(find "$HEMS_ROOT/SPEC_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
+          fi
+
+          echo ""
+          echo "Traceability check summary:"
 
           if [[ "$fail" -ne 0 ]]; then
             echo "Traceability check failed."
