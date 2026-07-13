@@ -6,56 +6,120 @@ FUNCTION="ATXX"
 SUB_FUNCTION="ATXX_DIAG"
 MODULE="ATXX_DIAG_CTL"
 
-#
+VERSION="v1.0.0"
+DELIVERY_CYCLE="MD31_01"
+
+CODE_DIR="HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
+MOD_DIR="HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
+SPEC_DIR="HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
+
+echo "Fixing manifests and traceability files..."
+
+############################################
 # CODE_HEMS
-#
+############################################
 
-mkdir -p "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
+cat > "$CODE_DIR/trace_links.csv" << EOF
+source,target,link_type
+${MODULE}.c,${MODULE}.h,includes
+${MODULE}.c,${MODULE}_static_analysis_report.txt,validated_by
+${MODULE}.c,${MODULE}_sil_results.txt,tested_by
+EOF
 
-touch "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}.c"
-touch "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}.h"
-touch "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_compiler_log.txt"
-touch "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_static_analysis_report.txt"
-touch "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_sil_results.txt"
-touch "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_certification_report.txt"
-touch "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/trace_links.csv"
-touch "HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/code-manifest.yaml"
+cat > "$CODE_DIR/code-manifest.yaml" << EOF
+module: $MODULE
+type: code
+area: CODE_HEMS
+function: $FUNCTION
+sub_function: $SUB_FUNCTION
+version: $VERSION
+delivery_cycle: $DELIVERY_CYCLE
 
-#
+files:
+  - ${MODULE}.c
+  - ${MODULE}.h
+  - ${MODULE}_compiler_log.txt
+  - ${MODULE}_static_analysis_report.txt
+  - ${MODULE}_sil_results.txt
+  - ${MODULE}_certification_report.txt
+  - trace_links.csv
+EOF
+
+############################################
 # MOD_HEMS
-#
+############################################
 
-mkdir -p "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
+cat > "$MOD_DIR/trace_links.csv" << EOF
+source,target,link_type
+${MODULE}.slx,${MODULE}_dictionary.sldd,uses
+${MODULE}.slx,${MODULE}_analysis_report.txt,validated_by
+${MODULE}.slx,${MODULE}_east_report.pdf,reviewed_by
+${MODULE}.slx,${MODULE}_mdt_reference.txt,linked_to_mdt
+${MODULE}.slx,${MODULE}_sof_reference.txt,linked_to_sof
+EOF
 
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}.slx"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_dictionary.sldd"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_interface.xlsx"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_variant.xlsx"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_stimuli.mat"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_calibration.html"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_analysis_report.txt"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_east_report.pdf"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_delivery_package.zip"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_sof_reference.txt"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_mdt_reference.txt"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/trace_links.csv"
-touch "HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/module-manifest.yaml"
+cat > "$MOD_DIR/module-manifest.yaml" << EOF
+module: $MODULE
+type: module
+area: MOD_HEMS
+function: $FUNCTION
+sub_function: $SUB_FUNCTION
+version: $VERSION
+delivery_cycle: $DELIVERY_CYCLE
 
-#
+files:
+  - ${MODULE}.slx
+  - ${MODULE}_dictionary.sldd
+  - ${MODULE}_interface.xlsx
+  - ${MODULE}_variant.xlsx
+  - ${MODULE}_stimuli.mat
+  - ${MODULE}_calibration.html
+  - ${MODULE}_analysis_report.txt
+  - ${MODULE}_east_report.pdf
+  - ${MODULE}_delivery_package.zip
+  - ${MODULE}_sof_reference.txt
+  - ${MODULE}_mdt_reference.txt
+  - trace_links.csv
+EOF
+
+############################################
 # SPEC_HEMS
-#
+############################################
 
-mkdir -p "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
+cat > "$SPEC_DIR/trace_links.csv" << EOF
+source,target,link_type
+${MODULE}_spec_source.xml,${MODULE}_spec_document.pdf,documented_by
+${MODULE}_crs_interface.xml,${MODULE}_spec_source.xml,defines
+${MODULE}_technical_fact_reference.txt,${MODULE}_sdt_reference.txt,linked_to_sdt
+EOF
 
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_spec_source.xml"
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_spec_document.pdf"
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_comparison_report.txt"
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_history_log.txt"
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_crs_interface.xml"
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_sdt_reference.txt"
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/${MODULE}_technical_fact_reference.txt"
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/trace_links.csv"
-touch "HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE/spec-manifest.yaml"
+cat > "$SPEC_DIR/spec-manifest.yaml" << EOF
+module: $MODULE
+type: specification
+area: SPEC_HEMS
+function: $FUNCTION
+sub_function: $SUB_FUNCTION
+version: $VERSION
+delivery_cycle: $DELIVERY_CYCLE
 
-echo "Created:"
-echo "ATXX -> ATXX_DIAG -> ATXX_DIAG_CTL"
+files:
+  - ${MODULE}_spec_source.xml
+  - ${MODULE}_spec_document.pdf
+  - ${MODULE}_comparison_report.txt
+  - ${MODULE}_history_log.txt
+  - ${MODULE}_crs_interface.xml
+  - ${MODULE}_sdt_reference.txt
+  - ${MODULE}_technical_fact_reference.txt
+  - trace_links.csv
+EOF
+
+echo ""
+echo "Repair completed successfully."
+echo ""
+echo "Updated files:"
+echo "$CODE_DIR/code-manifest.yaml"
+echo "$CODE_DIR/trace_links.csv"
+echo "$MOD_DIR/module-manifest.yaml"
+echo "$MOD_DIR/trace_links.csv"
+echo "$SPEC_DIR/spec-manifest.yaml"
+echo "$SPEC_DIR/trace_links.csv"

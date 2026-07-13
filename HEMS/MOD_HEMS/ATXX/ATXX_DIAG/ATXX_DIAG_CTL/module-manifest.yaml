@@ -1,0 +1,21 @@
+module: ATXX_DIAG_CTL
+type: module
+area: MOD_HEMS
+function: ATXX
+sub_function: ATXX_DIAG
+version: v1.0.0
+delivery_cycle: MD31_01
+
+files:
+  - ATXX_DIAG_CTL.slx
+  - ATXX_DIAG_CTL_dictionary.sldd
+  - ATXX_DIAG_CTL_interface.xlsx
+  - ATXX_DIAG_CTL_variant.xlsx
+  - ATXX_DIAG_CTL_stimuli.mat
+  - ATXX_DIAG_CTL_calibration.html
+  - ATXX_DIAG_CTL_analysis_report.txt
+  - ATXX_DIAG_CTL_east_report.pdf
+  - ATXX_DIAG_CTL_delivery_package.zip
+  - ATXX_DIAG_CTL_sof_reference.txt
+  - ATXX_DIAG_CTL_mdt_reference.txt
+  - trace_links.csv

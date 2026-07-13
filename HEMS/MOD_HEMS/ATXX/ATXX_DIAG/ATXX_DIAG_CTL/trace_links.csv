@@ -1,0 +1,6 @@
+source,target,link_type
+ATXX_DIAG_CTL.slx,ATXX_DIAG_CTL_dictionary.sldd,uses
+ATXX_DIAG_CTL.slx,ATXX_DIAG_CTL_analysis_report.txt,validated_by
+ATXX_DIAG_CTL.slx,ATXX_DIAG_CTL_east_report.pdf,reviewed_by
+ATXX_DIAG_CTL.slx,ATXX_DIAG_CTL_mdt_reference.txt,linked_to_mdt
+ATXX_DIAG_CTL.slx,ATXX_DIAG_CTL_sof_reference.txt,linked_to_sof

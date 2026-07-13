@@ -1,0 +1,16 @@
+module: ATXX_DIAG_CTL
+type: code
+area: CODE_HEMS
+function: ATXX
+sub_function: ATXX_DIAG
+version: v1.0.0
+delivery_cycle: MD31_01
+
+files:
+  - ATXX_DIAG_CTL.c
+  - ATXX_DIAG_CTL.h
+  - ATXX_DIAG_CTL_compiler_log.txt
+  - ATXX_DIAG_CTL_static_analysis_report.txt
+  - ATXX_DIAG_CTL_sil_results.txt
+  - ATXX_DIAG_CTL_certification_report.txt
+  - trace_links.csv
