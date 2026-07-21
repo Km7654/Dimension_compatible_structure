@@ -1,0 +1,1210 @@
+baseline: v1.0.2.7
+delivery_cycle: MD31_01
+release_scope: full_hems
+selected_path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL
+release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+branch: main
+generated_by: GitHub Actions
+generated_on: 2026-07-21T08:29:28Z
+
+released_files:
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL.c
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    sha256: a0718f10f719a36ee2ede872cfe2882156a9c238a48a3a62e31d38209aa286e3
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL.h
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 2da9ca8ba86cd143d83795c0ef19e19dae6b0dcf6b1bce6ad2c3d905b701396a
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_certification_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 96a17d61d6cb3770a83c160be41dc16aa1bc8f0786dbfb9cebc61315030d4fb2
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_compiler_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 39c919077c63774669d3e59fe0ebd4519fac9a76aba024737b59d755e3a67948
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_sil_results.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: d516d99a40a59a667f3362e2db4ae8779a371d181f43e351f0a7429286d1a3de
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_static_analysis_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 52a94734f5f21743284a50f5da6a151c3731ba0e8bf377c3e9592b00fd2b5209
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/code-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: 27224f58b26a339fb43c51190abbc16a835e4dbb63c5dcfc99cc7d1d93c6c740
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL.c
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 38cf234fdb6365525714381f89fb0edc8b90de5211134a9d68a8034281ff3c4c
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL.h
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: a21fe94bb052f870cd5f671cb2d3a6782741441fa773f1eedd102025a07ae5a1
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_certification_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: d160986a34ae9af91e8b27f5cd9a030c00a0c4dd20558a4459c06660b9d47a10
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_compiler_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: fa85455f5333607c07a0aca5585cdb4a760687a4ab4c3e144df98084372900be
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_sil_results.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 81e40ff751275d1fd3c8a050d2e29e872b1285e00ca424bc5ce870c622593938
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_static_analysis_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 5688e5598bda96cb4e268ded2e99ebc0e6a83d7d4e3af15149ca7968a376e27e
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/code-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: e1093bde77034aa108d0ec287ab924240c0fed09b43fb799d6f81ab52ab29c60
+  - path: HEMS/CODE_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL.c
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL.h
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_certification_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_compiler_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_sil_results.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_static_analysis_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/code-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: a80715aeee89b042031e8a7347e4924f50cda0eb
+    sha256: 63f2f806b1e2f0a9d41d4c5605cfb0a55ea1223c824b011d265bcb11d11318d3
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: a80715aeee89b042031e8a7347e4924f50cda0eb
+    sha256: 4050197c3d4a0d23f4cbefd8fe3fa987fc7dcfd430932654ff7dfb6bf765971a
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL.c
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 1b9be1bb387fa6f8c3bc988cc16e88f32aed1de959593dc62a8774a3b79a98ad
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL.h
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 5193bf157facac8c2cc586beea0f8511ba6f46edfa01b425efe0faff128ae8da
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_certification_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: d90362f7704dbef44eb432b5972eb17a954309e9b804563924f4724fb43c84db
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_compiler_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 6bc10b978dc1328404f439657a9c1193278293169a7f4f4d6d0d2173eb53b336
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_sil_results.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 403b430d78155616c01441a17e7dd30051851a5d36835e11b361884fb5cea518
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_static_analysis_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 9b2af87d298b7e9a3ed3db63c9def1de7cd17d53120517a77df3f00cd260e3b7
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/code-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: 44aaa98ad03109b4e67e31f50bebfcb53899a354fe12b7e719dd2b31097ddcf6
+  - path: HEMS/CODE_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL.slx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: f98ff9e4919a68a7fb50332e79f7a6b063fbdd7306b4b3fb70b05b148b882653
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_analysis_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 52d825d145978b8b318723dda3e2a734c7bae622bf414512a485ed80f9b6ec31
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_calibration.html
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: c87454f0951b53354ee0abdcd71d85d59bdf98bd656015a00512c28b1ff09585
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_delivery_package.zip
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: d2fa8045e07a2ca291e3c6f1182307c9917503fb09f47606780bfd9e6d67b6d6
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_dictionary.sldd
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 203ffc0e29c217116b07d5bab543c3af231057890f518e349bae800f42faa9c8
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_east_report.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 76df1315ed99e8422f999a96193322839e78b1065222e2959390f66bac34a2e4
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_interface.xlsx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 57ca607275e797a68f262f2c82e3eb4f852b0079ca8d2dddb9afd84fba8ff8a7
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_mdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: abb056ad9a0c7a5368c2943fd5d718e6a8d27d1fb5e09e58ba0399cfcec7e333
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_sof_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 75bd3c7bbefb1702683d8852cf52ef7c0eeea58b60d3741eb70424da745b2d84
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_stimuli.mat
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 50b52ad83008b49554559c411e6e66eb81c847bf930b74333ca36be8fa0e0f98
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_variant.xlsx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 6a91b4876c9255058c04b276ba49c9a7d6ce9bb1380cef7ea86f5805b7c59934
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/module-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: 7a1a26681abcf683da186c965f44aa2387d7105847493a54348d8c71476cae6c
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL.slx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 074fa038120e77597e7174e266792b70cc6fa93cbf93f78b1df1189b6249897f
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_analysis_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 621203461985ca684c5161b2997827dda2cf3723ccc21d75194bba7123ebe58b
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_calibration.html
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 31559ff7b8abdb40c61b19de6e4a553281ab02def3dbaa3c9fbc8addf635e89d
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_delivery_package.zip
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 841223f32cec255baaadf84b79a271e8e53c5814f83705a7d29969c04938e7be
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_dictionary.sldd
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 3f01a21e927d4e757dca27a8ed33ba79f69aee6c7bf0ce4d8fd3d3d3327a3250
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_east_report.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 15446ce9e064d3ffc1d12a125155f7b466dd5b9fdd29ee81eb5b8f732c570cb0
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_interface.xlsx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 4fb637102b369a1b3d1b53896223a7d82e5e1c243bc6743d87b17a8f4777c796
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_mdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 38efc8a4d42c0afcdb3db0a19b0cac444af8f2cca081e44c1c76021c314afa28
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_sof_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 32659056f115935020c487e1374eb42646f3b299ce737715ec8cedacb1b40d25
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_stimuli.mat
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 38678bdb97efde624166311a2d6c4a85245e96f6bb616f1294a3ab8642f5dad7
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_variant.xlsx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: ba5ae8e3d202f2d19a7fb871f60023d5485ddfafd03eebf7c8a18cca8643edde
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/module-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: 9880149567eff22cbf2896bec1cb62f8a0647068def3b4b1b6ea5fd829e6bbf7
+  - path: HEMS/MOD_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL.slx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_analysis_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_calibration.html
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_delivery_package.zip
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_dictionary.sldd
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_east_report.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_interface.xlsx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_mdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_sof_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_stimuli.mat
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_variant.xlsx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/module-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: a80715aeee89b042031e8a7347e4924f50cda0eb
+    sha256: 3165b98d255bb985d3b30cd40ff27ec3910dbf51ca56b8066cd602399a74102c
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: a80715aeee89b042031e8a7347e4924f50cda0eb
+    sha256: 0c03d5f8edf805c41b3140dd88d45da147812c7c073fa28fa0445effa1f2f3f5
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL.slx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 61906abdfd7c50f73e51350340efacc30e8d5a6babb131fd4c0e36bd1146edd0
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_analysis_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 75ff0c0a62cea37c6d088809bf068378c103d95e0e8f32e9fa89f4e5ab4c7288
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_calibration.html
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: e218911ef5cbcb44fbea4753423f90ddcf1d801e5c65a4678f1299788c0fe197
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_delivery_package.zip
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: fda3a10ee659478d3de91962b4de085892b745cea3931eb45dcd3d845f4d2200
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_dictionary.sldd
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 93e80876b9ac9b7cef44ec02eaa26d711f48cb383961d6ec8dd23b737cce0395
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_east_report.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: a9abed75bdc8bb3a166483c795d0feccbd48b45ee7cbb65f42652b656142c0ff
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_interface.xlsx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 215d2ca36587fcb4c7ac8943b802bfba492648580a2e259442e33e87f420a62d
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_mdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 2198eaa1cb28293bce0f42c1195e8c1fbf1b6e1770dbfcfcb8859e3dbd0d450b
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_sof_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: bb518eb353ab545fd0b6dd54cfbae985c2feee0efcf9e2152de1dadab9dae40d
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_stimuli.mat
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 8a8034310cec1cbeda7ebea359fea631f20a865e23edcc098eae0863bda68446
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_variant.xlsx
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: b5115434ba2a2aa0473c7f60417db04be0f9ee04bbd0864cce99e2840d329d48
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/module-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: 7ff9fb5ff8aa170427582e104d0642fbba32f81f2fcddc41b5403c6be67e3829
+  - path: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_comparison_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: f3bc73ea7c0ed6ca1b035245343fb84ebc62dd694932bcf16b625c55383b3b18
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_crs_interface.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 85daed0c13cbe54d427ec2645a0185421b3081dfec4e181227ac61afb8fa40d5
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_history_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: c7f82a9f029fb67549a74776b8bd1dd90863710851541b7dfa9ad6f0a0a89f8d
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_sdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 7d27f61737aaa2e9db464753c15164d41d9a0319b19e78fec111aa173dcb60b1
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_spec_document.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 9502b8cf8755650307b94c40eefb7bad1ab67363308cae83d30f771b08448544
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_spec_source.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: f30ea0e6790b4d28b91e896d084da01bf2d80c2d492de36d0bdb802b7716ab65
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL_technical_fact_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 1ce257d57df65d69f9a1fb83c200721ce50ccfb0eec24c7bd39c3291dfce15b9
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/spec-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: 4067cbd305f99478240b60efd309ea0ecbaf932a6c692e166860154e3aa07c05
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_comparison_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 24368d8500922d5a6e25ba6d701d14ff945671c4a50fd0d0ee111a409bf08970
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_crs_interface.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 992c125f586c2dd9dafe8e585fc7e1673d23dc8bde2082b39c5af9c179f5d2b5
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_history_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 869768107eb8b10561f2bfb04de86edf083490685eaa31c8d0e504c0aefaff7b
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_sdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: ad46d0391ef7e12b367c8358ddd365c270e0f3d08c035cf6eaffbaee27d59b25
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_spec_document.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 7d793431981f15ba28a66ccf3bda7c251933aa33c8aacc6e33c3d059150800f8
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_spec_source.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: eecc0582e73c0eb5aebfaa8572fd4e773f0f8f354ef4855f9bb01197ddb2bedf
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/ASXX_DGNX_CTL_technical_fact_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 4cbeddc874fb19f1c673900e8680ccffde8c025ffecf643d582e0ddd43274c09
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/spec-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: deb246bb2c157d756a4ad7f6d4fbd08359be3b4ee6d37a9e0c2e8768ea5667eb
+  - path: HEMS/SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_comparison_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_crs_interface.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_history_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_sdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_spec_document.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_spec_source.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/ATXX_DIAG_CTL_technical_fact_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: 63ef8eaa3c77b65fcf747eb3307dc20a13885061
+    sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/spec-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: a80715aeee89b042031e8a7347e4924f50cda0eb
+    sha256: cb193bdabb2b12267ffcd0b19c746734c9e7cefc99965eb977fa662c1b4cb2dd
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: a80715aeee89b042031e8a7347e4924f50cda0eb
+    sha256: cac0b468b6d27a2f1e29a8d2453c55543832e20e6d967dc9bb4e68664b292e25
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_comparison_report.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 4edd6f276b5062980d6b3ed482b5b88ddad6f237d201928cbb7340e3816a5d7e
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_crs_interface.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: d7f8866dfb693e9a42cd238ad8fa539e1e2e2214840831483d4bfbd29ae51feb
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_history_log.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 1b4253252a88af972cae5996754ba5ef72cc0889033c41364ee134546065e9a0
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_sdt_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 59eacdea0d6e6234d6facfa32fa919f6da9680650eaac65a1753418575c727a5
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_spec_document.pdf
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: c2c0eb9e07b5abf0d95fecea8a170c17ec59b94f95dbebfa4fc48eb46bba2d47
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_spec_source.xml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: df51721c9702f81177e8abc87f3fbfcbb3f1ba7f4d0ef45b2fa7f80972152739
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/ATXX_MAIN_CTL_technical_fact_reference.txt
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 6250eb89f47899bd4c5712037a95939750c71524c8b8e5e9ab3c7fe4a2f2209a
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/spec-manifest.yaml
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: bf395031470ccb3a763ee5f429c8208a637922ae
+    sha256: 0e840efdb3f196ee0a5c864ea22a948fd27c09f1fd0a34d3c2a27245093ef5ac
+  - path: HEMS/SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL/trace_links.csv
+    area: HEMS
+    function: HEMS
+    sub_function: HEMS
+    module: HEMS
+    item: HEMS
+    release_version: v1.0.2.7
+    release_commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+    last_changed_commit: e11fc58fe08f1e0446bb9d46a48381f4e693287d
+    sha256: 65d2b945b51ad38985d8fcad350224acdc203b06c5ba95a234f11170d9106b90

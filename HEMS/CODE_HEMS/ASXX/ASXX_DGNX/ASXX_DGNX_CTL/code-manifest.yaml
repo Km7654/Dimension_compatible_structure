@@ -3,11 +3,11 @@ type: code
 area: CODE_HEMS
 function: ASXX
 sub_function: ASXX_DGNX
-version: v1.0.2.6
+version: v1.0.2.7
 delivery_cycle: MD31_01
-commit: 6ace9ae6b01c9924e046b86dfb4ba1a0960ae86e
+commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
 generated_by: GitHub Actions
-generated_on: 2026-07-09T08:51:59Z
+generated_on: 2026-07-21T08:29:27Z
 files:
   - ASXX_DGNX_CTL.c
   - ASXX_DGNX_CTL.h
