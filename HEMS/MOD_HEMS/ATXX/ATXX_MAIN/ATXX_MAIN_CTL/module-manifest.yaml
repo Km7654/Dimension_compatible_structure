@@ -3,11 +3,11 @@ type: module
 area: MOD_HEMS
 function: ATXX
 sub_function: ATXX_MAIN
-version: v1.0.2.7
-delivery_cycle: MD31_01
-commit: 4a258a72d7f62b5d114dc0ba9562575d50ffb18b
+version: v1.0.2.8
+delivery_cycle: MD31_02
+commit: d0e55ff54c2df03400a9c0b77310ddff9b2c9b1f
 generated_by: GitHub Actions
-generated_on: 2026-07-21T08:29:27Z
+generated_on: 2026-07-28T07:12:29Z
 files:
   - ATXX_MAIN_CTL.slx
   - ATXX_MAIN_CTL_analysis_report.txt
