@@ -1,0 +1,373 @@
+name: Item Specification Versioning
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  item-spec-versioning:
+    name: Update item specification versions
+    runs-on: ubuntu-latest
+
+    if: github.event.pull_request.merged == true
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git user
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Detect changed items and update item versions
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          python3 <<'PYTHON_SCRIPT'
+          import csv
+          import os
+          import re
+          import subprocess
+          import textwrap
+          from pathlib import Path
+          from datetime import datetime, timezone
+
+          base_sha = os.environ["BASE_SHA"]
+          merge_sha = os.environ["MERGE_SHA"]
+          pr_number = os.environ["PR_NUMBER"]
+          pr_title = os.environ["PR_TITLE"]
+          source_branch = os.environ["SOURCE_BRANCH"]
+          target_branch = os.environ["TARGET_BRANCH"]
+          repository = os.environ["REPOSITORY"]
+
+          safe_pr_title = pr_title.replace('"', "'")
+
+          versioned_areas = {
+              "SPEC_HEMS",
+              "MOD_HEMS",
+              "CODE_HEMS",
+          }
+
+          ignored_file_names = {
+              "spec-manifest.yaml",
+              "module-manifest.yaml",
+              "code-manifest.yaml",
+              "trace_links.csv",
+              ".keep",
+          }
+
+          ignored_prefixes = (
+              "HEMS/BASELINES/",
+              "HEMS/INCOMING/",
+              "HEMS/DELIVERY_REQUESTS/",
+          )
+
+          print("Base SHA:", base_sha)
+          print("Merge SHA:", merge_sha)
+          print("PR Number:", pr_number)
+          print("Source branch:", source_branch)
+          print("Target branch:", target_branch)
+
+          changed_output = subprocess.check_output(
+              [
+                  "git",
+                  "diff",
+                  "--name-only",
+                  "--diff-filter=ACMR",
+                  base_sha,
+                  merge_sha,
+              ],
+              text=True,
+          )
+
+          changed_files = [
+              line.strip()
+              for line in changed_output.splitlines()
+              if line.strip()
+          ]
+
+          print("Changed files:")
+          for changed_file in changed_files:
+              print(" -", changed_file)
+
+          changed_items = {}
+
+          for file_path in changed_files:
+              if not file_path.startswith("HEMS/"):
+                  continue
+
+              if file_path.startswith(ignored_prefixes):
+                  continue
+
+              parts = file_path.split("/")
+
+              # Expected controlled item structure:
+              # HEMS / AREA / Function / Sub-function / Module / Item
+              if len(parts) != 6:
+                  continue
+
+              root = parts[0]
+              area = parts[1]
+              function_name = parts[2]
+              sub_function = parts[3]
+              module = parts[4]
+              item_file = parts[5]
+
+              if root != "HEMS":
+                  continue
+
+              if area not in versioned_areas:
+                  continue
+
+              if item_file in ignored_file_names:
+                  continue
+
+              changed_items[file_path] = {
+                  "area": area,
+                  "function": function_name,
+                  "sub_function": sub_function,
+                  "module": module,
+                  "item": item_file,
+                  "item_path": file_path,
+              }
+
+          if not changed_items:
+              print("No versioned item files changed.")
+              Path("no-item-version-changes.txt").write_text(
+                  "No item version changes detected.\n",
+                  encoding="utf-8",
+              )
+              raise SystemExit(0)
+
+          base_dir = Path("HEMS") / "BASELINES" / "ITEM_VERSIONS"
+          item_records_dir = base_dir / "items"
+
+          base_dir.mkdir(parents=True, exist_ok=True)
+          item_records_dir.mkdir(parents=True, exist_ok=True)
+
+          index_file = base_dir / "item-version-index.csv"
+
+          current_versions = {}
+
+          if index_file.is_file():
+              with index_file.open("r", encoding="utf-8", newline="") as index_handle:
+                  reader = csv.DictReader(index_handle)
+                  for row in reader:
+                      current_versions[row["item_path"]] = row
+
+          updated_rows = {}
+          created_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+          for item_path, info in sorted(changed_items.items()):
+              old_row = current_versions.get(item_path)
+
+              if old_row:
+                  previous_version = int(old_row["current_version"])
+                  previous_merge_commit = old_row.get("latest_merge_commit", "")
+              else:
+                  previous_version = 0
+                  previous_merge_commit = ""
+
+              # Prevent duplicate version increment if the workflow is rerun for the same merged PR.
+              if previous_merge_commit == merge_sha:
+                  print(f"Skipping {item_path}. This merge commit is already versioned.")
+                  updated_rows[item_path] = old_row
+                  continue
+
+              new_version = previous_version + 1
+
+              safe_item_name = re.sub(
+                  r"[^A-Za-z0-9._-]+",
+                  "_",
+                  info["item"],
+              )
+
+              tag_name = (
+                  f"item/"
+                  f"{info['area']}/"
+                  f"{info['function']}/"
+                  f"{info['sub_function']}/"
+                  f"{info['module']}/"
+                  f"{safe_item_name}/"
+                  f"v{new_version}"
+              )
+
+              item_record_dir = (
+                  item_records_dir
+                  / info["area"]
+                  / info["function"]
+                  / info["sub_function"]
+                  / info["module"]
+              )
+
+              item_record_dir.mkdir(parents=True, exist_ok=True)
+
+              item_record_file = item_record_dir / f"{safe_item_name}.yaml"
+              item_history_file = item_record_dir / f"{safe_item_name}-history.yaml"
+
+              item_record = textwrap.dedent(
+                  f"""\
+                  item:
+                    area: {info["area"]}
+                    function: {info["function"]}
+                    sub_function: {info["sub_function"]}
+                    module: {info["module"]}
+                    item: {info["item"]}
+                    item_path: {info["item_path"]}
+                    current_version: {new_version}
+                    latest_tag: {tag_name}
+                    latest_merge_commit: {merge_sha}
+                    latest_pull_request: {pr_number}
+                    latest_pull_request_title: "{safe_pr_title}"
+                    source_branch: {source_branch}
+                    target_branch: {target_branch}
+                    repository: {repository}
+                    updated_utc: {created_utc}
+                  """
+              )
+
+              item_record_file.write_text(item_record, encoding="utf-8")
+
+              history_entry = textwrap.dedent(
+                  f"""\
+                  - version: {new_version}
+                    tag: {tag_name}
+                    merge_commit: {merge_sha}
+                    pull_request: {pr_number}
+                    pull_request_title: "{safe_pr_title}"
+                    source_branch: {source_branch}
+                    target_branch: {target_branch}
+                    updated_utc: {created_utc}
+                  """
+              )
+
+              if item_history_file.is_file():
+                  existing_history = item_history_file.read_text(
+                      encoding="utf-8",
+                      errors="ignore",
+                  ).rstrip()
+
+                  item_history_file.write_text(
+                      existing_history + "\n" + history_entry,
+                      encoding="utf-8",
+                  )
+              else:
+                  item_history_file.write_text(
+                      "history:\n" + history_entry,
+                      encoding="utf-8",
+                  )
+
+              updated_rows[item_path] = {
+                  "item_path": item_path,
+                  "current_version": str(new_version),
+                  "latest_tag": tag_name,
+                  "latest_merge_commit": merge_sha,
+                  "latest_pull_request": str(pr_number),
+                  "updated_utc": created_utc,
+              }
+
+              existing_tags = subprocess.check_output(
+                  ["git", "tag", "--list", tag_name],
+                  text=True,
+              ).strip()
+
+              if existing_tags:
+                  print(f"Tag already exists, skipping tag creation: {tag_name}")
+              else:
+                  subprocess.run(
+                      [
+                          "git",
+                          "tag",
+                          "-a",
+                          tag_name,
+                          "-m",
+                          f"Item specification version {new_version} for {item_path}",
+                      ],
+                      check=True,
+                  )
+
+                  print(f"Created tag: {tag_name}")
+
+              print(f"Updated item version: {item_path} -> v{new_version}")
+
+          merged_rows = dict(current_versions)
+          merged_rows.update(updated_rows)
+
+          with index_file.open("w", encoding="utf-8", newline="") as index_handle:
+              fieldnames = [
+                  "item_path",
+                  "current_version",
+                  "latest_tag",
+                  "latest_merge_commit",
+                  "latest_pull_request",
+                  "updated_utc",
+              ]
+
+              writer = csv.DictWriter(index_handle, fieldnames=fieldnames)
+              writer.writeheader()
+
+              for item_path in sorted(merged_rows):
+                  row = merged_rows[item_path]
+
+                  if row is None:
+                      continue
+
+                  writer.writerow(
+                      {
+                          "item_path": row["item_path"],
+                          "current_version": row["current_version"],
+                          "latest_tag": row["latest_tag"],
+                          "latest_merge_commit": row["latest_merge_commit"],
+                          "latest_pull_request": row["latest_pull_request"],
+                          "updated_utc": row["updated_utc"],
+                      }
+                  )
+
+          print("Updated item version index:")
+          print(index_file)
+          PYTHON_SCRIPT
+
+      - name: Commit item version metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git add HEMS/BASELINES/ITEM_VERSIONS
+
+          if git diff --cached --quiet; then
+            echo "No item version metadata changes to commit."
+          else
+            git commit -m "Update item specification versions after PR #${{ github.event.pull_request.number }}"
+            git push origin main
+          fi
+
+      - name: Push item version tags
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git push origin --tags

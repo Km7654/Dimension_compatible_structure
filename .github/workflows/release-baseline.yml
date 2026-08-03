@@ -123,6 +123,11 @@ jobs:
               echo "Example: HEMS/MOD_HEMS/ASXX"
               exit 1
             fi
+
+            if [[ "${parts[1]}" != "SPEC_HEMS" && "${parts[1]}" != "MOD_HEMS" && "${parts[1]}" != "CODE_HEMS" ]]; then
+              echo "ERROR: function scope must be under SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
+              exit 1
+            fi
           fi
 
           if [[ "$SCOPE" == "sub_function" ]]; then
@@ -131,6 +136,11 @@ jobs:
             if (( ${#parts[@]} != 4 )); then
               echo "ERROR: sub_function scope path must be HEMS/AREA/Function/Sub-function."
               echo "Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX"
+              exit 1
+            fi
+
+            if [[ "${parts[1]}" != "SPEC_HEMS" && "${parts[1]}" != "MOD_HEMS" && "${parts[1]}" != "CODE_HEMS" ]]; then
+              echo "ERROR: sub_function scope must be under SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
               exit 1
             fi
           fi
@@ -345,6 +355,7 @@ jobs:
           BASELINE_DIR="HEMS/BASELINES/$VERSION"
           BASELINE_MANIFEST="$BASELINE_DIR/baseline-manifest.yaml"
           RELEASE_DIR="baseline-selection-$VERSION"
+          ITEM_VERSION_INDEX="HEMS/BASELINES/ITEM_VERSIONS/item-version-index.csv"
 
           mkdir -p "$BASELINE_DIR"
 
@@ -364,14 +375,30 @@ jobs:
           while IFS= read -r file; do
             IFS='/' read -r -a parts <<< "$file"
 
-            area="${parts-unknown}"
-            function_name="${parts-unknown}"
-            sub_function="${parts-unknown}"
-            module="${parts-unknown}"
-            item="${parts-$(basename "$file")}"
+            area="${parts[1]:-unknown}"
+            function_name="${parts[2]:-unknown}"
+            sub_function="${parts[3]:-unknown}"
+            module="${parts[4]:-unknown}"
+            item="${parts[5]:-$(basename "$file")}"
 
             file_hash="$(sha256sum "$file" | awk '{print $1}')"
             last_changed_commit="$(git log -n 1 --format="%H" -- "$file" || echo "unknown")"
+
+            item_spec_version="not_versioned"
+            item_version_tag="not_available"
+            item_latest_merge_commit="not_available"
+            item_latest_pull_request="not_available"
+
+            if [[ -f "$ITEM_VERSION_INDEX" ]]; then
+              matched_line="$(awk -F',' -v item_path="$file" 'NR > 1 && $1 == item_path {print $0}' "$ITEM_VERSION_INDEX" | tail -n 1 || true)"
+
+              if [[ -n "$matched_line" ]]; then
+                item_spec_version="$(echo "$matched_line" | awk -F',' '{print $2}')"
+                item_version_tag="$(echo "$matched_line" | awk -F',' '{print $3}')"
+                item_latest_merge_commit="$(echo "$matched_line" | awk -F',' '{print $4}')"
+                item_latest_pull_request="$(echo "$matched_line" | awk -F',' '{print $5}')"
+              fi
+            fi
 
             {
               echo "  - path: $file"
@@ -381,6 +408,10 @@ jobs:
               echo "    module: $module"
               echo "    item: $item"
               echo "    release_version: $VERSION"
+              echo "    item_spec_version: $item_spec_version"
+              echo "    item_version_tag: $item_version_tag"
+              echo "    item_latest_merge_commit: $item_latest_merge_commit"
+              echo "    item_latest_pull_request: $item_latest_pull_request"
               echo "    release_commit: ${{ github.sha }}"
               echo "    last_changed_commit: $last_changed_commit"
               echo "    sha256: $file_hash"
