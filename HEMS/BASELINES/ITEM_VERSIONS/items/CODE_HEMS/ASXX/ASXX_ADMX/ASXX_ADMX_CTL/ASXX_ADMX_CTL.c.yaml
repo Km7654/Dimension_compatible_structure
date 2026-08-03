@@ -1,0 +1,16 @@
+item:
+  area: CODE_HEMS
+  function: ASXX
+  sub_function: ASXX_ADMX
+  module: ASXX_ADMX_CTL
+  item: ASXX_ADMX_CTL.c
+  item_path: HEMS/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL.c
+  current_version: 1
+  latest_tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL.c/v1
+  latest_merge_commit: 52eff8b68915c6374df7179a74d53e824ac28e01
+  latest_pull_request: 2
+  latest_pull_request_title: "Update ASXX DGNX CTL item"
+  source_branch: feature/test-item-versioning
+  target_branch: main
+  repository: Km7654/Dimension_compatible_structure
+  updated_utc: 2026-08-03T12:06:52Z
