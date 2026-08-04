@@ -16,3 +16,13 @@ files:
   - ASXX_ADMX_CTL_sil_results.txt
   - ASXX_ADMX_CTL_static_analysis_report.txt
   - trace_links.csv
+
+item_version:
+  version: 1
+  tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v1
+  sha: 5fc6bfe271aaa696d68f29acd4830f876bfb0882
+
+item_version_history:
+  - version: 1
+    tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v1
+    sha: 5fc6bfe271aaa696d68f29acd4830f876bfb0882
