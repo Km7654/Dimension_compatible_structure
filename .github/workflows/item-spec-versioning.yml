@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   item-spec-versioning:
-    name: Update item specification versions
+    name: Update item version inside package manifest
     runs-on: ubuntu-latest
 
     if: github.event.pull_request.merged == true
@@ -30,11 +30,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-      - name: Detect changed items and update item versions
+      - name: Update item version in package manifest
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
@@ -48,11 +47,9 @@ jobs:
           set -euo pipefail
 
           python3 <<'PYTHON_SCRIPT'
-          import csv
           import os
           import re
           import subprocess
-          import textwrap
           from pathlib import Path
           from datetime import datetime, timezone
 
@@ -63,19 +60,18 @@ jobs:
           source_branch = os.environ["SOURCE_BRANCH"]
           target_branch = os.environ["TARGET_BRANCH"]
           repository = os.environ["REPOSITORY"]
+          updated_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-          safe_pr_title = pr_title.replace('"', "'")
-
-          versioned_areas = {
-              "SPEC_HEMS",
-              "MOD_HEMS",
-              "CODE_HEMS",
+          manifest_by_area = {
+              "CODE_HEMS": "code-manifest.yaml",
+              "MOD_HEMS": "module-manifest.yaml",
+              "SPEC_HEMS": "spec-manifest.yaml",
           }
 
           ignored_file_names = {
-              "spec-manifest.yaml",
-              "module-manifest.yaml",
               "code-manifest.yaml",
+              "module-manifest.yaml",
+              "spec-manifest.yaml",
               "trace_links.csv",
               ".keep",
           }
@@ -86,23 +82,124 @@ jobs:
               "HEMS/DELIVERY_REQUESTS/",
           )
 
-          print("Base SHA:", base_sha)
-          print("Merge SHA:", merge_sha)
-          print("PR Number:", pr_number)
-          print("Source branch:", source_branch)
-          print("Target branch:", target_branch)
+          def run_git(command):
+              return subprocess.check_output(command, text=True).strip()
 
-          changed_output = subprocess.check_output(
-              [
-                  "git",
-                  "diff",
-                  "--name-only",
-                  "--diff-filter=ACMR",
-                  base_sha,
-                  merge_sha,
-              ],
-              text=True,
-          )
+          def safe_tag_component(value):
+              return re.sub(r"[^A-Za-z0-9._-]+", "_", value)
+
+          def yaml_quote(value):
+              text = str(value).replace('"', "'")
+              return f'"{text}"'
+
+          def strip_old_item_version_sections(manifest_text):
+              lines = manifest_text.splitlines()
+              keep_lines = []
+
+              for line in lines:
+                  if line.startswith("item_version:"):
+                      break
+                  if line.startswith("item_version_history:"):
+                      break
+                  keep_lines.append(line)
+
+              return "\n".join(keep_lines).rstrip() + "\n"
+
+          def extract_top_level_section(manifest_text, section_name):
+              lines = manifest_text.splitlines()
+              start = None
+
+              for index, line in enumerate(lines):
+                  if line == f"{section_name}:":
+                      start = index + 1
+                      break
+
+              if start is None:
+                  return []
+
+              section_lines = []
+              for line in lines[start:]:
+                  if line and not line.startswith(" "):
+                      break
+                  section_lines.append(line)
+
+              return section_lines
+
+          def parse_existing_item_version(manifest_text):
+              section_lines = extract_top_level_section(manifest_text, "item_version")
+              data = {}
+
+              for line in section_lines:
+                  match = re.match(r"\s+([A-Za-z0-9_]+):\s*(.*)\s*$", line)
+                  if not match:
+                      continue
+
+                  key = match.group(1).strip()
+                  value = match.group(2).strip().strip('"').strip("'")
+                  data[key] = value
+
+              return data
+
+          def extract_existing_history_entries(manifest_text):
+              section_lines = extract_top_level_section(manifest_text, "item_version_history")
+              return [line for line in section_lines if line.strip()]
+
+          def get_manifest_path(item_info):
+              manifest_name = manifest_by_area[item_info["area"]]
+              return (
+                  Path("HEMS")
+                  / item_info["area"]
+                  / item_info["function"]
+                  / item_info["sub_function"]
+                  / item_info["item"]
+                  / manifest_name
+              )
+
+          def build_basic_manifest(item_info, manifest_path):
+              item_dir = manifest_path.parent
+              direct_files = sorted(
+                  file.name
+                  for file in item_dir.iterdir()
+                  if file.is_file() and file.name != manifest_path.name
+              )
+
+              manifest_type = {
+                  "CODE_HEMS": "code",
+                  "MOD_HEMS": "module",
+                  "SPEC_HEMS": "specification",
+              }[item_info["area"]]
+
+              lines = [
+                  f"module: {item_info['item']}",
+                  f"type: {manifest_type}",
+                  f"area: {item_info['area']}",
+                  f"function: {item_info['function']}",
+                  f"sub_function: {item_info['sub_function']}",
+                  "version: not_released",
+                  "delivery_cycle: not_released",
+                  f"commit: {merge_sha}",
+                  "generated_by: GitHub Actions",
+                  f"generated_on: {updated_utc}",
+                  "files:",
+              ]
+
+              for file_name in direct_files:
+                  lines.append(f"  - {file_name}")
+
+              return "\n".join(lines) + "\n"
+
+          print(f"Base SHA: {base_sha}")
+          print(f"Merge SHA: {merge_sha}")
+          print(f"Pull Request: {pr_number}")
+
+          changed_output = run_git([
+              "git",
+              "diff",
+              "--name-only",
+              "--diff-filter=ACMR",
+              base_sha,
+              merge_sha,
+          ])
 
           changed_files = [
               line.strip()
@@ -112,7 +209,7 @@ jobs:
 
           print("Changed files:")
           for changed_file in changed_files:
-              print(" -", changed_file)
+              print(f" - {changed_file}")
 
           changed_items = {}
 
@@ -125,243 +222,143 @@ jobs:
 
               parts = file_path.split("/")
 
-              # Expected controlled item structure:
-              # HEMS / AREA / Function / Sub-function / Module / Item
+              # Expected controlled structure:
+              # HEMS / AREA / Function / Sub-function / Item folder / File inside item folder
               if len(parts) != 6:
                   continue
 
-              root = parts[0]
-              area = parts[1]
-              function_name = parts[2]
-              sub_function = parts[3]
-              module = parts[4]
-              item_file = parts[5]
+              root, area, function_name, sub_function, item_folder, file_name = parts
 
               if root != "HEMS":
                   continue
 
-              if area not in versioned_areas:
+              if area not in manifest_by_area:
                   continue
 
-              if item_file in ignored_file_names:
+              if file_name in ignored_file_names:
                   continue
 
-              changed_items[file_path] = {
+              item_key = "/".join(parts[:5])
+
+              changed_items[item_key] = {
                   "area": area,
                   "function": function_name,
                   "sub_function": sub_function,
-                  "module": module,
-                  "item": item_file,
-                  "item_path": file_path,
+                  "item": item_folder,
+                  "item_folder_path": item_key,
               }
 
           if not changed_items:
-              print("No versioned item files changed.")
-              Path("no-item-version-changes.txt").write_text(
-                  "No item version changes detected.\n",
-                  encoding="utf-8",
-              )
+              print("No item folders requiring version updates were changed.")
               raise SystemExit(0)
 
-          base_dir = Path("HEMS") / "BASELINES" / "ITEM_VERSIONS"
-          item_records_dir = base_dir / "items"
+          created_tags = []
+          updated_manifests = []
 
-          base_dir.mkdir(parents=True, exist_ok=True)
-          item_records_dir.mkdir(parents=True, exist_ok=True)
+          for item_folder_path, item_info in sorted(changed_items.items()):
+              manifest_path = get_manifest_path(item_info)
 
-          index_file = base_dir / "item-version-index.csv"
-
-          current_versions = {}
-
-          if index_file.is_file():
-              with index_file.open("r", encoding="utf-8", newline="") as index_handle:
-                  reader = csv.DictReader(index_handle)
-                  for row in reader:
-                      current_versions[row["item_path"]] = row
-
-          updated_rows = {}
-          created_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-          for item_path, info in sorted(changed_items.items()):
-              old_row = current_versions.get(item_path)
-
-              if old_row:
-                  previous_version = int(old_row["current_version"])
-                  previous_merge_commit = old_row.get("latest_merge_commit", "")
+              if manifest_path.is_file():
+                  original_manifest = manifest_path.read_text(encoding="utf-8", errors="ignore")
               else:
-                  previous_version = 0
-                  previous_merge_commit = ""
+                  original_manifest = build_basic_manifest(item_info, manifest_path)
 
-              # Prevent duplicate version increment if the workflow is rerun for the same merged PR.
-              if previous_merge_commit == merge_sha:
-                  print(f"Skipping {item_path}. This merge commit is already versioned.")
-                  updated_rows[item_path] = old_row
+              base_manifest = strip_old_item_version_sections(original_manifest)
+              old_version_data = parse_existing_item_version(original_manifest)
+              existing_history_lines = extract_existing_history_entries(original_manifest)
+
+              old_version = int(old_version_data.get("version", "0") or "0")
+              old_merge_sha = old_version_data.get("sha", "")
+
+              if old_merge_sha == merge_sha:
+                  print(f"Skipping duplicate version update for {item_folder_path}. Same merge SHA already recorded.")
+                  updated_manifests.append(str(manifest_path))
                   continue
 
-              new_version = previous_version + 1
-
-              safe_item_name = re.sub(
-                  r"[^A-Za-z0-9._-]+",
-                  "_",
-                  info["item"],
-              )
+              new_version = old_version + 1
 
               tag_name = (
                   f"item/"
-                  f"{info['area']}/"
-                  f"{info['function']}/"
-                  f"{info['sub_function']}/"
-                  f"{info['module']}/"
-                  f"{safe_item_name}/"
+                  f"{item_info['area']}/"
+                  f"{item_info['function']}/"
+                  f"{item_info['sub_function']}/"
+                  f"{safe_tag_component(item_info['item'])}/"
                   f"v{new_version}"
               )
 
-              item_record_dir = (
-                  item_records_dir
-                  / info["area"]
-                  / info["function"]
-                  / info["sub_function"]
-                  / info["module"]
-              )
-
-              item_record_dir.mkdir(parents=True, exist_ok=True)
-
-              item_record_file = item_record_dir / f"{safe_item_name}.yaml"
-              item_history_file = item_record_dir / f"{safe_item_name}-history.yaml"
-
-              item_record = textwrap.dedent(
-                  f"""\
-                  item:
-                    area: {info["area"]}
-                    function: {info["function"]}
-                    sub_function: {info["sub_function"]}
-                    module: {info["module"]}
-                    item: {info["item"]}
-                    item_path: {info["item_path"]}
-                    current_version: {new_version}
-                    latest_tag: {tag_name}
-                    latest_merge_commit: {merge_sha}
-                    latest_pull_request: {pr_number}
-                    latest_pull_request_title: "{safe_pr_title}"
-                    source_branch: {source_branch}
-                    target_branch: {target_branch}
-                    repository: {repository}
-                    updated_utc: {created_utc}
-                  """
-              )
-
-              item_record_file.write_text(item_record, encoding="utf-8")
-
-              history_entry = textwrap.dedent(
-                  f"""\
-                  - version: {new_version}
-                    tag: {tag_name}
-                    merge_commit: {merge_sha}
-                    pull_request: {pr_number}
-                    pull_request_title: "{safe_pr_title}"
-                    source_branch: {source_branch}
-                    target_branch: {target_branch}
-                    updated_utc: {created_utc}
-                  """
-              )
-
-              if item_history_file.is_file():
-                  existing_history = item_history_file.read_text(
-                      encoding="utf-8",
-                      errors="ignore",
-                  ).rstrip()
-
-                  item_history_file.write_text(
-                      existing_history + "\n" + history_entry,
-                      encoding="utf-8",
-                  )
-              else:
-                  item_history_file.write_text(
-                      "history:\n" + history_entry,
-                      encoding="utf-8",
-                  )
-
-              updated_rows[item_path] = {
-                  "item_path": item_path,
-                  "current_version": str(new_version),
-                  "latest_tag": tag_name,
-                  "latest_merge_commit": merge_sha,
-                  "latest_pull_request": str(pr_number),
-                  "updated_utc": created_utc,
-              }
-
-              existing_tags = subprocess.check_output(
-                  ["git", "tag", "--list", tag_name],
-                  text=True,
-              ).strip()
-
-              if existing_tags:
-                  print(f"Tag already exists, skipping tag creation: {tag_name}")
-              else:
-                  subprocess.run(
-                      [
-                          "git",
-                          "tag",
-                          "-a",
-                          tag_name,
-                          "-m",
-                          f"Item specification version {new_version} for {item_path}",
-                      ],
-                      check=True,
-                  )
-
-                  print(f"Created tag: {tag_name}")
-
-              print(f"Updated item version: {item_path} -> v{new_version}")
-
-          merged_rows = dict(current_versions)
-          merged_rows.update(updated_rows)
-
-          with index_file.open("w", encoding="utf-8", newline="") as index_handle:
-              fieldnames = [
-                  "item_path",
-                  "current_version",
-                  "latest_tag",
-                  "latest_merge_commit",
-                  "latest_pull_request",
-                  "updated_utc",
+              item_version_section = [
+                  "item_version:",
+                  f"  version: {new_version}",
+                  f"  tag: {tag_name}",
+                  f"  sha: {merge_sha}",
               ]
 
-              writer = csv.DictWriter(index_handle, fieldnames=fieldnames)
-              writer.writeheader()
+              new_history_entry = [
+                  f"  - version: {new_version}",
+                  f"    tag: {tag_name}",
+                  f"    sha: {merge_sha}",
+              ]
 
-              for item_path in sorted(merged_rows):
-                  row = merged_rows[item_path]
+              history_lines = ["item_version_history:"]
+              history_lines.extend(existing_history_lines)
+              history_lines.extend(new_history_entry)
 
-                  if row is None:
-                      continue
+              final_manifest = (
+                  base_manifest.rstrip()
+                  + "\n\n"
+                  + "\n".join(item_version_section)
+                  + "\n\n"
+                  + "\n".join(history_lines)
+                  + "\n"
+              )
 
-                  writer.writerow(
-                      {
-                          "item_path": row["item_path"],
-                          "current_version": row["current_version"],
-                          "latest_tag": row["latest_tag"],
-                          "latest_merge_commit": row["latest_merge_commit"],
-                          "latest_pull_request": row["latest_pull_request"],
-                          "updated_utc": row["updated_utc"],
-                      }
-                  )
+              manifest_path.write_text(final_manifest, encoding="utf-8")
+              updated_manifests.append(str(manifest_path))
+              print(f"Updated manifest: {manifest_path}")
+              print(f"Item folder: {item_folder_path}")
+              print(f"New item version: {new_version}")
+              print(f"Tag: {tag_name}")
+              print(f"SHA: {merge_sha}")
 
-          print("Updated item version index:")
-          print(index_file)
+              tag_exists = run_git(["git", "tag", "--list", tag_name])
+
+              if tag_exists:
+                  print(f"Tag already exists, skipping tag creation: {tag_name}")
+              else:
+                  subprocess.run([
+                      "git",
+                      "tag",
+                      "-a",
+                      tag_name,
+                      "-m",
+                      f"Item version {new_version} for {item_info['item']}",
+                  ], check=True)
+                  created_tags.append(tag_name)
+                  print(f"Created tag: {tag_name}")
+
+          print("Updated manifest files:")
+          for manifest in updated_manifests:
+              print(f" - {manifest}")
+
+          if created_tags:
+              print("Created tags:")
+              for tag in created_tags:
+                  print(f" - {tag}")
+          else:
+              print("No new tags were created.")
           PYTHON_SCRIPT
 
-      - name: Commit item version metadata
+      - name: Commit updated package manifests
         shell: bash
         run: |
           set -euo pipefail
 
-          git add HEMS/BASELINES/ITEM_VERSIONS
+          git add HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS
 
           if git diff --cached --quiet; then
-            echo "No item version metadata changes to commit."
+            echo "No package manifest version changes to commit."
           else
-            git commit -m "Update item specification versions after PR #${{ github.event.pull_request.number }}"
+            git commit -m "Update item versions in package manifests after PR #${{ github.event.pull_request.number }}"
             git push origin main
           fi
 
@@ -369,5 +366,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           git push origin --tags
