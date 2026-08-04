@@ -1,0 +1,17 @@
+history:
+- version: 1
+  tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL.c/v1
+  merge_commit: 52eff8b68915c6374df7179a74d53e824ac28e01
+  pull_request: 2
+  pull_request_title: "Update ASXX DGNX CTL item"
+  source_branch: feature/test-item-versioning
+  target_branch: main
+  updated_utc: 2026-08-03T12:06:52Z
+- version: 2
+  tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/ASXX_ADMX_CTL.c/v2
+  merge_commit: b9af722efb4ef9383e5529bb1d120f18e7a019be
+  pull_request: 3
+  pull_request_title: "Update ASXX DGNX CTL item version 2"
+  source_branch: feature/test-item-versioning
+  target_branch: main
+  updated_utc: 2026-08-03T12:36:44Z
