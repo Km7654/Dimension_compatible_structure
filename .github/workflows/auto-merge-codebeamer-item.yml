@@ -280,9 +280,8 @@ jobs:
 
           gh pr merge "$PR_NUMBER" \
             --merge \
-            --auto \
             --subject "$MERGE_SUBJECT" \
             --body-file "$MERGE_BODY_FILE"
 
           echo "Merge command submitted."
-          echo "If branch protection checks are pending, auto-merge will complete after checks pass."
+          echo "Merge command submitted."
