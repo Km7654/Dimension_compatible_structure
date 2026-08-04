@@ -1,0 +1,288 @@
+name: Auto Merge Codebeamer Item Commit
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - production
+      - "release/**"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge-codebeamer-item:
+    name: Auto merge branch when commit contains Codebeamer tracker ID
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout pushed branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git user
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+      - name: Detect tracker ID, item folder, code file, and next version
+        id: detect
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          echo "Branch: $BRANCH_NAME"
+
+          git fetch origin main --tags
+
+          LATEST_COMMIT_MESSAGE="$(git log -1 --format=%B)"
+
+          echo "Latest commit message:"
+          echo "$LATEST_COMMIT_MESSAGE"
+
+          TRACKER_ID="$(echo "$LATEST_COMMIT_MESSAGE" | grep -oE '#[0-9]{3,10}' | head -n 1 | sed 's/#//' || true)"
+
+          if [[ -z "$TRACKER_ID" ]]; then
+            echo "No Codebeamer tracker ID found in latest commit message."
+            echo "Expected format example: #12345"
+            echo "No auto-merge will be performed."
+            echo "should_merge=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "Codebeamer tracker ID found: #$TRACKER_ID"
+
+          CHANGED_FILES_FILE="changed-files.txt"
+
+          git diff --name-only --diff-filter=ACMR origin/main...HEAD > "$CHANGED_FILES_FILE" || true
+
+          echo "Changed files against origin/main:"
+          cat "$CHANGED_FILES_FILE" || true
+
+          C_FILES_FILE="changed-code-c-files.txt"
+
+          awk -F'/' '
+            NF == 6 &&
+            $1 == "HEMS" &&
+            $2 == "CODE_HEMS" &&
+            tolower($6) ~ /\.c$/ {
+              print $0
+            }
+          ' "$CHANGED_FILES_FILE" | sort -u > "$C_FILES_FILE"
+
+          if [[ ! -s "$C_FILES_FILE" ]]; then
+            echo "ERROR: Tracker ID was found, but no changed CODE_HEMS .c file was found."
+            echo "Expected path format:"
+            echo "HEMS/CODE_HEMS/<Function>/<Sub-function>/<ItemFolder>/<CodeFile.c>"
+            exit 1
+          fi
+
+          ITEM_FOLDERS_FILE="changed-code-item-folders.txt"
+
+          awk -F'/' '
+            NF == 6 &&
+            $1 == "HEMS" &&
+            $2 == "CODE_HEMS" &&
+            tolower($6) ~ /\.c$/ {
+              print $1 "/" $2 "/" $3 "/" $4 "/" $5
+            }
+          ' "$CHANGED_FILES_FILE" | sort -u > "$ITEM_FOLDERS_FILE"
+
+          ITEM_FOLDER_COUNT="$(wc -l < "$ITEM_FOLDERS_FILE" | xargs)"
+          C_FILE_COUNT="$(wc -l < "$C_FILES_FILE" | xargs)"
+
+          if [[ "$ITEM_FOLDER_COUNT" -ne 1 ]]; then
+            echo "ERROR: More than one CODE_HEMS item folder was changed."
+            echo "Please keep one item folder per Codebeamer auto-merge commit."
+            echo "Detected item folders:"
+            cat "$ITEM_FOLDERS_FILE"
+            exit 1
+          fi
+
+          if [[ "$C_FILE_COUNT" -ne 1 ]]; then
+            echo "ERROR: More than one .c file was changed in the item folder."
+            echo "Please keep one .c file per Codebeamer auto-merge commit."
+            echo "Detected .c files:"
+            cat "$C_FILES_FILE"
+            exit 1
+          fi
+
+          ITEM_FOLDER="$(cat "$ITEM_FOLDERS_FILE")"
+          CODE_FILE_PATH="$(cat "$C_FILES_FILE")"
+          CODE_FILE_NAME="$(basename "$CODE_FILE_PATH")"
+
+          echo "Item folder: $ITEM_FOLDER"
+          echo "Code file path: $CODE_FILE_PATH"
+          echo "Code file name: $CODE_FILE_NAME"
+
+          MANIFEST_FILE="$ITEM_FOLDER/code-manifest.yaml"
+
+          CURRENT_VERSION="0"
+
+          if git cat-file -e "origin/main:$MANIFEST_FILE" 2>/dev/null; then
+            CURRENT_VERSION="$(git show "origin/main:$MANIFEST_FILE" | awk '
+              /^item_version:/ {
+                in_item_version = 1
+                next
+              }
+
+              in_item_version == 1 && /^[^ ]/ {
+                in_item_version = 0
+              }
+
+              in_item_version == 1 && $1 == "version:" {
+                print $2
+                exit
+              }
+            ')"
+
+            if [[ -z "$CURRENT_VERSION" ]]; then
+              CURRENT_VERSION="0"
+            fi
+          else
+            echo "Manifest not found on main yet: $MANIFEST_FILE"
+            echo "Starting version from 1."
+          fi
+
+          if ! [[ "$CURRENT_VERSION" =~ ^[0-9]+$ ]]; then
+            echo "WARNING: Current version is not numeric: $CURRENT_VERSION"
+            echo "Resetting current version to 0."
+            CURRENT_VERSION="0"
+          fi
+
+          NEXT_VERSION="$((CURRENT_VERSION + 1))"
+
+          MERGE_SUBJECT="#${TRACKER_ID} ${CODE_FILE_NAME} ${NEXT_VERSION}"
+
+          {
+            echo "should_merge=true"
+            echo "tracker_id=$TRACKER_ID"
+            echo "item_folder=$ITEM_FOLDER"
+            echo "code_file_path=$CODE_FILE_PATH"
+            echo "code_file_name=$CODE_FILE_NAME"
+            echo "current_version=$CURRENT_VERSION"
+            echo "next_version=$NEXT_VERSION"
+            echo "merge_subject=$MERGE_SUBJECT"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Prepared merge subject:"
+          echo "$MERGE_SUBJECT"
+
+      - name: Create or find pull request
+        if: steps.detect.outputs.should_merge == 'true'
+        id: pr
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
+          ITEM_FOLDER: ${{ steps.detect.outputs.item_folder }}
+          CODE_FILE_PATH: ${{ steps.detect.outputs.code_file_path }}
+          CODE_FILE_NAME: ${{ steps.detect.outputs.code_file_name }}
+          NEXT_VERSION: ${{ steps.detect.outputs.next_version }}
+          TRACKER_ID: ${{ steps.detect.outputs.tracker_id }}
+        run: |
+          set -euo pipefail
+
+          EXISTING_PR_NUMBER="$(gh pr list \
+            --base main \
+            --head "$BRANCH_NAME" \
+            --state open \
+            --json number \
+            --jq '.[0].number' || true)"
+
+          PR_BODY_FILE="auto-merge-pr-body.md"
+
+          {
+            echo "Automatic PR created from a commit containing Codebeamer tracker ID."
+            echo ""
+            echo "Tracker: #$TRACKER_ID"
+            echo ""
+            echo "Item folder:"
+            echo "$ITEM_FOLDER"
+            echo ""
+            echo "Code file:"
+            echo "$CODE_FILE_NAME"
+            echo ""
+            echo "Next item version:"
+            echo "$NEXT_VERSION"
+            echo ""
+            echo "Expected merge commit subject:"
+            echo "$MERGE_SUBJECT"
+          } > "$PR_BODY_FILE"
+
+          if [[ -n "$EXISTING_PR_NUMBER" ]]; then
+            echo "Existing PR found: #$EXISTING_PR_NUMBER"
+            PR_NUMBER="$EXISTING_PR_NUMBER"
+
+            gh pr edit "$PR_NUMBER" \
+              --title "$MERGE_SUBJECT" \
+              --body-file "$PR_BODY_FILE"
+          else
+            echo "Creating new PR from $BRANCH_NAME to main..."
+
+            gh pr create \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --title "$MERGE_SUBJECT" \
+              --body-file "$PR_BODY_FILE"
+
+            PR_NUMBER="$(gh pr view "$BRANCH_NAME" --json number --jq '.number')"
+          fi
+
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+
+          echo "Using PR number: $PR_NUMBER"
+
+      - name: Merge pull request with Codebeamer merge message
+        if: steps.detect.outputs.should_merge == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
+          ITEM_FOLDER: ${{ steps.detect.outputs.item_folder }}
+          CODE_FILE_PATH: ${{ steps.detect.outputs.code_file_path }}
+          CODE_FILE_NAME: ${{ steps.detect.outputs.code_file_name }}
+          NEXT_VERSION: ${{ steps.detect.outputs.next_version }}
+          TRACKER_ID: ${{ steps.detect.outputs.tracker_id }}
+        run: |
+          set -euo pipefail
+
+          MERGE_BODY_FILE="merge-body.md"
+
+          {
+            echo "Codebeamer tracker: #$TRACKER_ID"
+            echo ""
+            echo "Item folder:"
+            echo "$ITEM_FOLDER"
+            echo ""
+            echo "Code file:"
+            echo "$CODE_FILE_NAME"
+            echo ""
+            echo "Item version after merge:"
+            echo "$NEXT_VERSION"
+            echo ""
+            echo "This PR was automatically merged because the latest branch commit message contained #$TRACKER_ID."
+          } > "$MERGE_BODY_FILE"
+
+          echo "Merging PR #$PR_NUMBER with subject:"
+          echo "$MERGE_SUBJECT"
+
+          gh pr merge "$PR_NUMBER" \
+            --merge \
+            --auto \
+            --subject "$MERGE_SUBJECT" \
+            --body-file "$MERGE_BODY_FILE"
+
+          echo "Merge command submitted."
+          echo "If branch protection checks are pending, auto-merge will complete after checks pass."
