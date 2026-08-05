@@ -199,6 +199,9 @@ jobs:
           MERGE_SHA_PLACEHOLDER="pending_merge_sha"
           TAG_NAME="item/${ITEM_FOLDER#HEMS/}/v${NEXT_VERSION}"
 
+          export MERGE_SHA_PLACEHOLDER
+          export TAG_NAME
+
           python3 <<'PYTHON_SCRIPT'
           import os
           from pathlib import Path
