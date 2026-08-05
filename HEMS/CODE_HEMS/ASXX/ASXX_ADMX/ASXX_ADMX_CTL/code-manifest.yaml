@@ -18,9 +18,9 @@ files:
   - trace_links.csv
 
 item_version:
-  version: 4
-  tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v4
-  sha: 3a1241ffb8231281eced18096525892517d93090
+  version: 5
+  tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v5
+  sha: baa8ffb43e09f579b93b40cbb120ef1821089360
 
 item_version_history:
   - version: 1
@@ -35,3 +35,6 @@ item_version_history:
   - version: 4
     tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v4
     sha: 3a1241ffb8231281eced18096525892517d93090
+  - version: 5
+    tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v5
+    sha: baa8ffb43e09f579b93b40cbb120ef1821089360
