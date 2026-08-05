@@ -6,4 +6,3 @@ int ASXX_ADMX_CTL_main(void)
 }
 
 #test final
-#test
