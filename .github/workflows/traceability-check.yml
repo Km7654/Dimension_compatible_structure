@@ -76,14 +76,28 @@ jobs:
               fi
 
               if [[ "$inside_files_section" -eq 1 ]]; then
+                # Stop when the next top-level YAML section starts, for example:
+                # item_version:, item_version_history:, generated_by:, etc.
+                if [[ "$line" =~ ^[^[:space:]].*: ]]; then
+                  inside_files_section=0
+                  continue
+                fi
+
+                # Only validate direct list entries under the files section.
                 if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+(.+)$ ]]; then
                   listed_file="${BASH_REMATCH[1]}"
 
-                  # Remove optional quotes
+                  # Remove optional quotes and inline comments.
+                  listed_file="${listed_file%%#*}"
+                  listed_file="$(echo "$listed_file" | xargs)"
                   listed_file="${listed_file%\"}"
                   listed_file="${listed_file#\"}"
                   listed_file="${listed_file%\'}"
                   listed_file="${listed_file#\'}"
+
+                  if [[ -z "$listed_file" ]]; then
+                    continue
+                  fi
 
                   if [[ ! -f "$package_dir/$listed_file" ]]; then
                     echo "::error file=$manifest::Manifest lists missing file: $listed_file"
