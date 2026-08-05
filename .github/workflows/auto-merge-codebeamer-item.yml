@@ -22,7 +22,7 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.AUTO_MERGE_PAT }}
 
       - name: Configure Git user
         shell: bash
@@ -182,7 +182,7 @@ jobs:
         id: pr
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AUTO_MERGE_PAT }}
           BRANCH_NAME: ${{ github.ref_name }}
           MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
           ITEM_FOLDER: ${{ steps.detect.outputs.item_folder }}
@@ -247,7 +247,7 @@ jobs:
         if: steps.detect.outputs.should_merge == 'true'
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.AUTO_MERGE_PAT }}
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
           MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
           ITEM_FOLDER: ${{ steps.detect.outputs.item_folder }}
