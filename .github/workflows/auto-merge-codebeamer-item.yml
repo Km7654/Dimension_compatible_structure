@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   auto-merge-codebeamer-item:
-    name: Auto merge branch when commit contains Codebeamer tracker ID
+    name: Update manifest and auto merge when commit contains Codebeamer tracker ID
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +22,7 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
-          token: ${{ secrets.AUTO_MERGE_PAT }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git user
         shell: bash
@@ -160,7 +160,6 @@ jobs:
           fi
 
           NEXT_VERSION="$((CURRENT_VERSION + 1))"
-
           MERGE_SUBJECT="#${TRACKER_ID} ${CODE_FILE_NAME} ${NEXT_VERSION}"
 
           {
@@ -169,6 +168,7 @@ jobs:
             echo "item_folder=$ITEM_FOLDER"
             echo "code_file_path=$CODE_FILE_PATH"
             echo "code_file_name=$CODE_FILE_NAME"
+            echo "manifest_file=$MANIFEST_FILE"
             echo "current_version=$CURRENT_VERSION"
             echo "next_version=$NEXT_VERSION"
             echo "merge_subject=$MERGE_SUBJECT"
@@ -177,16 +177,120 @@ jobs:
           echo "Prepared merge subject:"
           echo "$MERGE_SUBJECT"
 
+      - name: Update code manifest on pushed branch
+        if: steps.detect.outputs.should_merge == 'true'
+        shell: bash
+        env:
+          ITEM_FOLDER: ${{ steps.detect.outputs.item_folder }}
+          CODE_FILE_PATH: ${{ steps.detect.outputs.code_file_path }}
+          CODE_FILE_NAME: ${{ steps.detect.outputs.code_file_name }}
+          MANIFEST_FILE: ${{ steps.detect.outputs.manifest_file }}
+          NEXT_VERSION: ${{ steps.detect.outputs.next_version }}
+          TRACKER_ID: ${{ steps.detect.outputs.tracker_id }}
+          MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! -f "$MANIFEST_FILE" ]]; then
+            echo "ERROR: Manifest file not found: $MANIFEST_FILE"
+            exit 1
+          fi
+
+          MERGE_SHA_PLACEHOLDER="pending_merge_sha"
+          TAG_NAME="item/${ITEM_FOLDER#HEMS/}/v${NEXT_VERSION}"
+
+          python3 <<'PYTHON_SCRIPT'
+          import os
+          from pathlib import Path
+
+          manifest_file = Path(os.environ["MANIFEST_FILE"])
+          next_version = os.environ["NEXT_VERSION"]
+          tag_name = os.environ["TAG_NAME"]
+          sha_value = os.environ["MERGE_SHA_PLACEHOLDER"]
+
+          original_text = manifest_file.read_text(encoding="utf-8", errors="ignore")
+
+          lines = original_text.splitlines()
+          kept_lines = []
+
+          for line in lines:
+              if line.startswith("item_version:"):
+                  break
+              if line.startswith("item_version_history:"):
+                  break
+              kept_lines.append(line)
+
+          existing_history = []
+          in_history = False
+
+          for line in lines:
+              if line.startswith("item_version_history:"):
+                  in_history = True
+                  continue
+              if in_history:
+                  if line and not line.startswith(" "):
+                      break
+                  if line.strip():
+                      existing_history.append(line)
+
+          item_version_section = [
+              "",
+              "item_version:",
+              f"  version: {next_version}",
+              f"  tag: {tag_name}",
+              f"  sha: {sha_value}",
+          ]
+
+          history_section = [
+              "",
+              "item_version_history:",
+          ]
+          history_section.extend(existing_history)
+          history_section.extend([
+              f"  - version: {next_version}",
+              f"    tag: {tag_name}",
+              f"    sha: {sha_value}",
+          ])
+
+          final_text = "\n".join(kept_lines).rstrip() + "\n" + "\n".join(item_version_section) + "\n" + "\n".join(history_section) + "\n"
+
+          manifest_file.write_text(final_text, encoding="utf-8")
+          print(f"Updated {manifest_file} to item version {next_version}")
+          PYTHON_SCRIPT
+
+          echo "Updated manifest preview:"
+          cat "$MANIFEST_FILE"
+
+      - name: Commit updated manifest to branch
+        if: steps.detect.outputs.should_merge == 'true'
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          MANIFEST_FILE: ${{ steps.detect.outputs.manifest_file }}
+          NEXT_VERSION: ${{ steps.detect.outputs.next_version }}
+          CODE_FILE_NAME: ${{ steps.detect.outputs.code_file_name }}
+          TRACKER_ID: ${{ steps.detect.outputs.tracker_id }}
+        run: |
+          set -euo pipefail
+
+          git add "$MANIFEST_FILE"
+
+          if git diff --cached --quiet; then
+            echo "No manifest changes to commit."
+          else
+            git commit -m "#${TRACKER_ID} Update ${CODE_FILE_NAME} manifest to version ${NEXT_VERSION}"
+            git push origin "HEAD:$BRANCH_NAME"
+          fi
+
       - name: Create or find pull request
         if: steps.detect.outputs.should_merge == 'true'
         id: pr
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.AUTO_MERGE_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BRANCH_NAME: ${{ github.ref_name }}
           MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
           ITEM_FOLDER: ${{ steps.detect.outputs.item_folder }}
-          CODE_FILE_PATH: ${{ steps.detect.outputs.code_file_path }}
           CODE_FILE_NAME: ${{ steps.detect.outputs.code_file_name }}
           NEXT_VERSION: ${{ steps.detect.outputs.next_version }}
           TRACKER_ID: ${{ steps.detect.outputs.tracker_id }}
@@ -240,18 +344,16 @@ jobs:
           fi
 
           echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-
           echo "Using PR number: $PR_NUMBER"
 
       - name: Merge pull request with Codebeamer merge message
         if: steps.detect.outputs.should_merge == 'true'
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.AUTO_MERGE_PAT }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
           MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
           ITEM_FOLDER: ${{ steps.detect.outputs.item_folder }}
-          CODE_FILE_PATH: ${{ steps.detect.outputs.code_file_path }}
           CODE_FILE_NAME: ${{ steps.detect.outputs.code_file_name }}
           NEXT_VERSION: ${{ steps.detect.outputs.next_version }}
           TRACKER_ID: ${{ steps.detect.outputs.tracker_id }}
@@ -283,5 +385,4 @@ jobs:
             --subject "$MERGE_SUBJECT" \
             --body-file "$MERGE_BODY_FILE"
 
-          echo "Merge command submitted."
           echo "Merge command submitted."
