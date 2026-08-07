@@ -5,3 +5,4 @@ int ASXX_ADMX_CTL_main(void)
     return 0;
 }
 
+test 1
