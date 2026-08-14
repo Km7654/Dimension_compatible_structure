@@ -5,20 +5,24 @@ on:
     branches:
       - main
       - production
-      - 'release/**'
+      - "release/**"
 
   push:
     branches:
       - main
       - production
-      - 'release/**'
-      - 'test/**'
-      - 'feature/**'
+      - "release/**"
+      - "test/**"
+      - "feature/**"
 
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   structure-check:
+    name: Validate changed HEMS paths
     runs-on: ubuntu-latest
 
     steps:
@@ -29,26 +33,62 @@ jobs:
 
       - name: Determine changed files
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-            HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          elif [[ "${{ github.event_name }}" == "push" ]]; then
-            BASE_SHA="${{ github.event.before }}"
-            HEAD_SHA="${{ github.sha }}"
+          BASE_SHA=""
+          HEAD_SHA=""
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE_SHA="$PR_BASE_SHA"
+            HEAD_SHA="$PR_HEAD_SHA"
+
+            echo "Pull request event detected."
+            echo "Base SHA: $BASE_SHA"
+            echo "Head SHA: $HEAD_SHA"
+
+          elif [[ "$EVENT_NAME" == "push" ]]; then
+            BASE_SHA="$PUSH_BEFORE_SHA"
+            HEAD_SHA="$CURRENT_SHA"
+
+            echo "Push event detected."
+            echo "Before SHA: $BASE_SHA"
+            echo "Current SHA: $HEAD_SHA"
+
           else
-            BASE_SHA="$(git rev-parse HEAD~1 2>/dev/null || echo '')"
+            BASE_SHA="$(git rev-parse HEAD~1 2>/dev/null || true)"
             HEAD_SHA="$(git rev-parse HEAD)"
+
+            echo "Manual workflow event detected."
+            echo "Base SHA: ${BASE_SHA:-not available}"
+            echo "Head SHA: $HEAD_SHA"
           fi
 
-          if [[ -z "$BASE_SHA" || "$BASE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+          if [[ -z "$BASE_SHA" ]] || \
+             [[ "$BASE_SHA" == "0000000000000000000000000000000000000000" ]] || \
+             ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+
+            echo ""
+            echo "A valid base commit is not available."
+            echo "All currently tracked files will be checked."
+
             git ls-files > changed_files.txt
           else
-            git diff --name-only --diff-filter=ACMR "$BASE_SHA" "$HEAD_SHA" > changed_files.txt || true
+            git diff \
+              --name-only \
+              --diff-filter=ACMR \
+              "$BASE_SHA" \
+              "$HEAD_SHA" \
+              > changed_files.txt || true
           fi
 
+          echo ""
           echo "Changed files:"
           cat changed_files.txt || true
 
@@ -58,83 +98,200 @@ jobs:
           set -euo pipefail
 
           HEMS_ROOT="HEMS"
+          RELEASE_SUFFIX="RI_16_0(1.0)"
+
+          ALLOWED_AREAS=(
+            "CODE_HEMS"
+            "MOD_HEMS"
+            "SPEC_HEMS"
+          )
+
+          ALLOWED_VARIANTS=(
+            "adacxxx2xg"
+            "adacxxx4xg"
+            "obmxxxx1xg"
+          )
+
           fail=0
           checked_hems_files=0
+          checked_item_level_files=0
+          checked_package_level_files=0
 
-          echo "Running HEMS structure check..."
-          echo "Expected controlled structure:"
-          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Module>/<Item>"
+          echo "============================================================"
+          echo "Changed HEMS path structure check"
+          echo "============================================================"
+          echo ""
+          echo "Allowed item-level file path:"
+          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Item>/<File>"
+          echo ""
+          echo "Allowed package-level file path:"
+          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Item>/<PackageFolder>/<File>"
+          echo ""
+          echo "Naming relationships:"
+          echo "1. Sub-function must start with <Function>_"
+          echo "2. Item must start with <Sub-function>_"
+          echo "3. Package folder must contain the complete item name"
           echo ""
 
-          is_supported_spec_item() {
-            local item="$1"
+          report_error() {
+            local file_path="$1"
+            local message="$2"
 
-            case "$item" in
-              spec-manifest.yaml) return 0 ;;
-              trace_links.csv) return 0 ;;
-              *.xml) return 0 ;;
-              *.pdf) return 0 ;;
-              *.txt) return 0 ;;
-              *.csv) return 0 ;;
-              *.xlsx) return 0 ;;
-              *.html) return 0 ;;
-              *.md) return 0 ;;
-              *.json) return 0 ;;
-              *.yaml) return 0 ;;
-              *.yml) return 0 ;;
-              *.docx) return 0 ;;
-              *) return 1 ;;
-            esac
+            echo "::error file=$file_path::$message"
+            fail=1
           }
 
-          is_supported_mod_item() {
-            local item="$1"
+          is_allowed_area() {
+            local area_name="$1"
+            local allowed_area
 
-            case "$item" in
-              module-manifest.yaml) return 0 ;;
-              trace_links.csv) return 0 ;;
-              *.slx) return 0 ;;
-              *.mdl) return 0 ;;
-              *.sldd) return 0 ;;
-              *.mat) return 0 ;;
-              *.m) return 0 ;;
-              *.mldatx) return 0 ;;
-              *.xlsx) return 0 ;;
-              *.csv) return 0 ;;
-              *.html) return 0 ;;
-              *.pdf) return 0 ;;
-              *.txt) return 0 ;;
-              *.xml) return 0 ;;
-              *.zip) return 0 ;;
-              *.a2l) return 0 ;;
-              *.json) return 0 ;;
-              *.yaml) return 0 ;;
-              *.yml) return 0 ;;
-              *) return 1 ;;
-            esac
+            for allowed_area in "${ALLOWED_AREAS[@]}"; do
+              if [[ "$area_name" == "$allowed_area" ]]; then
+                return 0
+              fi
+            done
+
+            return 1
           }
 
-          is_supported_code_item() {
-            local item="$1"
+          validate_simple_folder_name() {
+            local file_path="$1"
+            local folder_name="$2"
+            local folder_type="$3"
 
-            case "$item" in
-              code-manifest.yaml) return 0 ;;
-              trace_links.csv) return 0 ;;
-              *.c) return 0 ;;
-              *.h) return 0 ;;
-              *.cpp) return 0 ;;
-              *.hpp) return 0 ;;
-              *.txt) return 0 ;;
-              *.csv) return 0 ;;
-              *.html) return 0 ;;
-              *.pdf) return 0 ;;
-              *.log) return 0 ;;
-              *.xml) return 0 ;;
-              *.json) return 0 ;;
-              *.yaml) return 0 ;;
-              *.yml) return 0 ;;
-              *) return 1 ;;
-            esac
+            if [[ -z "$folder_name" ]]; then
+              report_error \
+                "$file_path" \
+                "$folder_type folder name must not be empty."
+
+              return
+            fi
+
+            if [[ "$folder_name" =~ [[:space:]] ]]; then
+              report_error \
+                "$file_path" \
+                "$folder_type folder name must not contain spaces. Found '$folder_name'."
+            fi
+
+            if [[ ! "$folder_name" =~ ^[A-Za-z0-9_]+$ ]]; then
+              report_error \
+                "$file_path" \
+                "$folder_type folder name may contain only letters, numbers, and underscores. Found '$folder_name'."
+            fi
+
+            if [[ "$folder_name" == *_ ]]; then
+              report_error \
+                "$file_path" \
+                "$folder_type folder name must not end with an underscore. Found '$folder_name'."
+            fi
+          }
+
+          validate_function_name() {
+            local file_path="$1"
+            local function_name="$2"
+
+            validate_simple_folder_name \
+              "$file_path" \
+              "$function_name" \
+              "Function"
+          }
+
+          validate_subfunction_name() {
+            local file_path="$1"
+            local function_name="$2"
+            local subfunction_name="$3"
+
+            validate_simple_folder_name \
+              "$file_path" \
+              "$subfunction_name" \
+              "Sub-function"
+
+            local required_prefix="${function_name}_"
+
+            if [[ "$subfunction_name" != "${required_prefix}"* ]]; then
+              report_error \
+                "$file_path" \
+                "Sub-function '$subfunction_name' must start with '${required_prefix}'."
+              return
+            fi
+
+            if [[ "$subfunction_name" == "$required_prefix" ]]; then
+              report_error \
+                "$file_path" \
+                "Sub-function '$subfunction_name' must contain a name after '${required_prefix}'."
+            fi
+          }
+
+          validate_item_name() {
+            local file_path="$1"
+            local subfunction_name="$2"
+            local item_name="$3"
+
+            validate_simple_folder_name \
+              "$file_path" \
+              "$item_name" \
+              "Item"
+
+            local required_prefix="${subfunction_name}_"
+
+            if [[ "$item_name" != "${required_prefix}"* ]]; then
+              report_error \
+                "$file_path" \
+                "Item '$item_name' must start with '${required_prefix}'."
+              return
+            fi
+
+            if [[ "$item_name" == "$required_prefix" ]]; then
+              report_error \
+                "$file_path" \
+                "Item '$item_name' must contain a name after '${required_prefix}'."
+            fi
+          }
+
+          validate_package_name() {
+            local file_path="$1"
+            local area_name="$2"
+            local item_name="$3"
+            local package_name="$4"
+
+            local matched=0
+            local variant
+            local expected_package_name
+
+            for variant in "${ALLOWED_VARIANTS[@]}"; do
+              if [[ "$area_name" == "SPEC_HEMS" ]]; then
+                expected_package_name="s_${item_name}_${variant}_SPEC_${RELEASE_SUFFIX}"
+              else
+                expected_package_name="a_${item_name}_${variant}_A_${RELEASE_SUFFIX}"
+              fi
+
+              if [[ "$package_name" == "$expected_package_name" ]]; then
+                matched=1
+                break
+              fi
+            done
+
+            if [[ "$matched" -eq 1 ]]; then
+              return
+            fi
+
+            echo "::error file=$file_path::Invalid package folder name '$package_name'."
+            echo "Area: $area_name"
+            echo "Parent item: $item_name"
+            echo ""
+            echo "Expected one of these package-folder names:"
+
+            for variant in "${ALLOWED_VARIANTS[@]}"; do
+              if [[ "$area_name" == "SPEC_HEMS" ]]; then
+                expected_package_name="s_${item_name}_${variant}_SPEC_${RELEASE_SUFFIX}"
+              else
+                expected_package_name="a_${item_name}_${variant}_A_${RELEASE_SUFFIX}"
+              fi
+
+              echo "  - $expected_package_name"
+            done
+
+            fail=1
           }
 
           while IFS= read -r file; do
@@ -145,8 +302,8 @@ jobs:
               continue
             fi
 
-            # Allowed support areas under HEMS.
-            # These are not validated as controlled engineering package content.
+            # Support areas are accepted but are not treated as controlled
+            # CODE_HEMS, MOD_HEMS, or SPEC_HEMS engineering content.
             if [[ "$file" == "$HEMS_ROOT/BASELINES/"* ]] || \
                [[ "$file" == "$HEMS_ROOT/DELIVERY_REQUESTS/"* ]] || \
                [[ "$file" == "$HEMS_ROOT/INCOMING/"* ]] || \
@@ -154,7 +311,8 @@ jobs:
                [[ "$file" == "$HEMS_ROOT/CODEOWNERS" ]] || \
                [[ "$file" == "$HEMS_ROOT/.gitignore" ]] || \
                [[ "$file" == "$HEMS_ROOT/.gitattributes" ]]; then
-              echo "Skipping allowed support path: $file"
+
+              echo "Skipping allowed HEMS support path: $file"
               continue
             fi
 
@@ -163,74 +321,123 @@ jobs:
               continue
             fi
 
-            echo "Checking HEMS file: $file"
+            echo ""
+            echo "Checking HEMS path: $file"
+
             checked_hems_files=$((checked_hems_files + 1))
 
-            IFS='/' read -r -a parts <<< "$file"
+            IFS="/" read -r -a parts <<< "$file"
 
-            # Required final structure:
-            # HEMS / AREA / Function / Sub-function / Module / Item
-            if (( ${#parts[@]} != 6 )); then
-              echo "::error file=$file::Invalid structure. Path must be exactly HEMS/AREA/Function/Sub-function/Module/Item. Nested item folders are not allowed."
-              fail=1
+            part_count="${#parts[@]}"
+
+            # Valid item-level file:
+            #
+            # HEMS / AREA / Function / Sub-function / Item / File
+            #
+            # Valid package-level file:
+            #
+            # HEMS / AREA / Function / Sub-function / Item /
+            # PackageFolder / File
+            if (( part_count != 6 && part_count != 7 )); then
+              report_error \
+                "$file" \
+                "Invalid path depth. Expected either HEMS/AREA/Function/Sub-function/Item/File or HEMS/AREA/Function/Sub-function/Item/PackageFolder/File."
+
               continue
             fi
 
             root="${parts[0]}"
             area="${parts[1]}"
             function_name="${parts[2]}"
-            sub_function="${parts[3]}"
-            module="${parts[4]}"
-            item="${parts[5]}"
+            subfunction_name="${parts[3]}"
+            item_name="${parts[4]}"
 
             if [[ "$root" != "$HEMS_ROOT" ]]; then
-              echo "::error file=$file::Path must start with HEMS."
-              fail=1
+              report_error \
+                "$file" \
+                "Path must start with '${HEMS_ROOT}'."
+
               continue
             fi
 
-            if [[ "$area" != "SPEC_HEMS" && "$area" != "MOD_HEMS" && "$area" != "CODE_HEMS" ]]; then
-              echo "::error file=$file::Area must be SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
-              fail=1
+            if ! is_allowed_area "$area"; then
+              report_error \
+                "$file" \
+                "Area '$area' is invalid. Area must be CODE_HEMS, MOD_HEMS, or SPEC_HEMS."
+
               continue
             fi
 
-            if [[ -z "$function_name" || -z "$sub_function" || -z "$module" || -z "$item" ]]; then
-              echo "::error file=$file::Function, Sub-function, Module, and Item must not be empty."
-              fail=1
-              continue
+            validate_function_name \
+              "$file" \
+              "$function_name"
+
+            validate_subfunction_name \
+              "$file" \
+              "$function_name" \
+              "$subfunction_name"
+
+            validate_item_name \
+              "$file" \
+              "$subfunction_name" \
+              "$item_name"
+
+            if (( part_count == 6 )); then
+              item_level_file="${parts[5]}"
+
+              checked_item_level_files=$((checked_item_level_files + 1))
+
+              echo "  Area:           $area"
+              echo "  Function:       $function_name"
+              echo "  Sub-function:   $subfunction_name"
+              echo "  Item:           $item_name"
+              echo "  Item-level file: $item_level_file"
+
+              # No validation is applied to item-level file names.
+              # Examples that are permitted:
+              #
+              # code-manifest.yaml
+              # module-manifest.yaml
+              # spec-manifest.yaml
+              # trace_links.csv
+              # any-other-file
+
+            elif (( part_count == 7 )); then
+              package_name="${parts[5]}"
+              package_file="${parts[6]}"
+
+              checked_package_level_files=$((checked_package_level_files + 1))
+
+              echo "  Area:           $area"
+              echo "  Function:       $function_name"
+              echo "  Sub-function:   $subfunction_name"
+              echo "  Item:           $item_name"
+              echo "  Package folder: $package_name"
+              echo "  Package file:   $package_file"
+
+              validate_package_name \
+                "$file" \
+                "$area" \
+                "$item_name" \
+                "$package_name"
+
+              # No validation is applied to files inside the package folder.
             fi
-
-            case "$area" in
-              SPEC_HEMS)
-                if ! is_supported_spec_item "$item"; then
-                  echo "::error file=$file::Unsupported SPEC_HEMS item type: $item"
-                  fail=1
-                  continue
-                fi
-                ;;
-
-              MOD_HEMS)
-                if ! is_supported_mod_item "$item"; then
-                  echo "::error file=$file::Unsupported MOD_HEMS item type: $item"
-                  fail=1
-                  continue
-                fi
-                ;;
-
-              CODE_HEMS)
-                if ! is_supported_code_item "$item"; then
-                  echo "::error file=$file::Unsupported CODE_HEMS item type: $item"
-                  fail=1
-                  continue
-                fi
-                ;;
-            esac
 
           done < changed_files.txt
 
           echo ""
-          echo "Total HEMS files checked: $checked_hems_files"
+          echo "============================================================"
+          echo "Structure check summary"
+          echo "============================================================"
+          echo "Changed HEMS files checked:  $checked_hems_files"
+          echo "Item-level files checked:    $checked_item_level_files"
+          echo "Package-level files checked: $checked_package_level_files"
+          echo ""
+
+          if [[ "$checked_hems_files" -eq 0 ]]; then
+            echo "No controlled HEMS files were changed."
+          fi
 
           if [[ "$fail" -ne 0 ]]; then
             echo "Structure check failed."

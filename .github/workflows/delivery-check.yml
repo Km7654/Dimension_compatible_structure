@@ -5,201 +5,464 @@ on:
     branches:
       - main
       - production
-      - 'release/**'
+      - "release/**"
 
   push:
     branches:
       - main
       - production
-      - 'release/**'
-      - 'test/**'
-      - 'feature/**'
+      - "release/**"
+      - "test/**"
+      - "feature/**"
 
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   delivery-check:
+    name: Validate HEMS folder naming structure
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate required delivery files
+      - name: Validate HEMS folder naming structure
         shell: bash
         run: |
           set -euo pipefail
 
           HEMS_ROOT="HEMS"
-          fail=0
+          RELEASE_SUFFIX="RI_16_0(1.0)"
 
-          echo "Running delivery completeness check..."
+          ALLOWED_AREAS=(
+            "CODE_HEMS"
+            "MOD_HEMS"
+            "SPEC_HEMS"
+          )
+
+          ALLOWED_VARIANTS=(
+            "adacxxx2xg"
+            "adacxxx4xg"
+            "obmxxxx1xg"
+          )
+
+          fail=0
+          checked_areas=0
+          checked_functions=0
+          checked_subfunctions=0
+          checked_items=0
+          checked_packages=0
+
+          echo "============================================================"
+          echo "HEMS folder naming structure check"
+          echo "============================================================"
+          echo ""
           echo "Expected structure:"
-          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Module>/<Items as direct files>"
+          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Item>/<PackageFolder>"
+          echo ""
+          echo "Naming relationships:"
+          echo "1. Sub-function must start with <Function>_"
+          echo "2. Item must start with <Sub-function>_"
+          echo "3. Package folder must contain the complete item name"
+          echo ""
+          echo "CODE_HEMS and MOD_HEMS package format:"
+          echo "a_<Item>_<Variant>_A_${RELEASE_SUFFIX}"
+          echo ""
+          echo "SPEC_HEMS package format:"
+          echo "s_<Item>_<Variant>_SPEC_${RELEASE_SUFFIX}"
+          echo ""
+          echo "Allowed variants:"
+          for variant in "${ALLOWED_VARIANTS[@]}"; do
+            echo "  - $variant"
+          done
           echo ""
 
-          check_file() {
-            local file="$1"
+          report_error() {
+            local path="$1"
             local message="$2"
 
-            if [[ ! -f "$file" ]]; then
-              echo "::error::$message Missing file: $file"
-              fail=1
+            echo "::error file=$path::$message"
+            fail=1
+          }
+
+          is_allowed_area() {
+            local area_name="$1"
+            local allowed_area
+
+            for allowed_area in "${ALLOWED_AREAS[@]}"; do
+              if [[ "$area_name" == "$allowed_area" ]]; then
+                return 0
+              fi
+            done
+
+            return 1
+          }
+
+          is_allowed_variant() {
+            local variant_name="$1"
+            local allowed_variant
+
+            for allowed_variant in "${ALLOWED_VARIANTS[@]}"; do
+              if [[ "$variant_name" == "$allowed_variant" ]]; then
+                return 0
+              fi
+            done
+
+            return 1
+          }
+
+          validate_simple_folder_name() {
+            local folder_path="$1"
+            local folder_name="$2"
+            local folder_type="$3"
+
+            if [[ -z "$folder_name" ]]; then
+              report_error \
+                "$folder_path" \
+                "$folder_type folder name must not be empty."
+
+              return
+            fi
+
+            if [[ "$folder_name" =~ [[:space:]] ]]; then
+              report_error \
+                "$folder_path" \
+                "$folder_type folder name must not contain spaces. Found: '$folder_name'"
+            fi
+
+            if [[ ! "$folder_name" =~ ^[A-Za-z0-9_]+$ ]]; then
+              report_error \
+                "$folder_path" \
+                "$folder_type folder name may contain only letters, numbers, and underscores. Found: '$folder_name'"
             fi
           }
 
-          require_any_file() {
-            local dir="$1"
-            local message="$2"
-            shift 2
-            local patterns=("$@")
-            local found=0
+          validate_function_name() {
+            local function_path="$1"
+            local function_name="$2"
 
-            for pattern in "${patterns[@]}"; do
-              if find "$dir" -maxdepth 1 -type f -iname "$pattern" | grep -q .; then
-                found=1
+            validate_simple_folder_name \
+              "$function_path" \
+              "$function_name" \
+              "Function"
+
+            if [[ "$function_name" == *_ ]]; then
+              report_error \
+                "$function_path" \
+                "Function name must not end with an underscore. Found: '$function_name'"
+            fi
+          }
+
+          validate_subfunction_name() {
+            local subfunction_path="$1"
+            local function_name="$2"
+            local subfunction_name="$3"
+
+            validate_simple_folder_name \
+              "$subfunction_path" \
+              "$subfunction_name" \
+              "Sub-function"
+
+            local required_prefix="${function_name}_"
+
+            if [[ "$subfunction_name" != "${required_prefix}"* ]]; then
+              report_error \
+                "$subfunction_path" \
+                "Sub-function '$subfunction_name' must start with '${required_prefix}'."
+            fi
+
+            if [[ "$subfunction_name" == "$required_prefix" ]]; then
+              report_error \
+                "$subfunction_path" \
+                "Sub-function '$subfunction_name' must contain a name after '${required_prefix}'."
+            fi
+
+            if [[ "$subfunction_name" == *_ ]]; then
+              report_error \
+                "$subfunction_path" \
+                "Sub-function name must not end with an underscore. Found: '$subfunction_name'"
+            fi
+          }
+
+          validate_item_name() {
+            local item_path="$1"
+            local subfunction_name="$2"
+            local item_name="$3"
+
+            validate_simple_folder_name \
+              "$item_path" \
+              "$item_name" \
+              "Item"
+
+            local required_prefix="${subfunction_name}_"
+
+            if [[ "$item_name" != "${required_prefix}"* ]]; then
+              report_error \
+                "$item_path" \
+                "Item '$item_name' must start with '${required_prefix}'."
+            fi
+
+            if [[ "$item_name" == "$required_prefix" ]]; then
+              report_error \
+                "$item_path" \
+                "Item '$item_name' must contain a name after '${required_prefix}'."
+            fi
+
+            if [[ "$item_name" == *_ ]]; then
+              report_error \
+                "$item_path" \
+                "Item name must not end with an underscore. Found: '$item_name'"
+            fi
+          }
+
+          validate_package_name() {
+            local package_path="$1"
+            local area_name="$2"
+            local item_name="$3"
+            local package_name="$4"
+
+            local matched=0
+            local variant
+            local expected_package_name
+
+            for variant in "${ALLOWED_VARIANTS[@]}"; do
+              if [[ "$area_name" == "SPEC_HEMS" ]]; then
+                expected_package_name="s_${item_name}_${variant}_SPEC_${RELEASE_SUFFIX}"
+              else
+                expected_package_name="a_${item_name}_${variant}_A_${RELEASE_SUFFIX}"
+              fi
+
+              if [[ "$package_name" == "$expected_package_name" ]]; then
+                matched=1
                 break
               fi
             done
 
-            if [[ "$found" -ne 1 ]]; then
-              echo "::error::$message Path: $dir"
-              echo "Expected one of these patterns:"
-              for pattern in "${patterns[@]}"; do
-                echo "  - $pattern"
-              done
-              fail=1
-            fi
-          }
-
-          reject_nested_folders() {
-            local dir="$1"
-            local message="$2"
-
-            if find "$dir" -mindepth 1 -maxdepth 1 -type d | grep -q .; then
-              echo "::error::$message Nested folders are not allowed under: $dir"
-              echo "Only direct item files are allowed inside the module folder."
-              echo "Nested folders found:"
-              find "$dir" -mindepth 1 -maxdepth 1 -type d | sort
-              fail=1
-            fi
-          }
-
-          check_trace_links() {
-            local trace_file="$1"
-            local message="$2"
-
-            if [[ ! -f "$trace_file" ]]; then
-              echo "::error::$message Missing traceability file: $trace_file"
-              fail=1
+            if [[ "$matched" -eq 1 ]]; then
               return
             fi
 
-            if ! head -n 1 "$trace_file" | grep -q "source,target"; then
-              echo "::error file=$trace_file::Traceability file must contain source,target header."
-              fail=1
+            echo "::error file=$package_path::Invalid package folder name '$package_name'."
+            echo "Area: $area_name"
+            echo "Parent item: $item_name"
+            echo ""
+            echo "Expected one of the following package-folder names:"
+
+            for variant in "${ALLOWED_VARIANTS[@]}"; do
+              if [[ "$area_name" == "SPEC_HEMS" ]]; then
+                expected_package_name="s_${item_name}_${variant}_SPEC_${RELEASE_SUFFIX}"
+              else
+                expected_package_name="a_${item_name}_${variant}_A_${RELEASE_SUFFIX}"
+              fi
+
+              echo "  - $expected_package_name"
+            done
+
+            fail=1
+          }
+
+          check_unexpected_area_folders() {
+            local area_path
+            local area_name
+
+            while IFS= read -r area_path; do
+              [[ -z "$area_path" ]] && continue
+
+              area_name="$(basename "$area_path")"
+
+              if ! is_allowed_area "$area_name"; then
+                report_error \
+                  "$area_path" \
+                  "Unexpected folder '$area_name' directly under HEMS. Allowed folders are CODE_HEMS, MOD_HEMS, and SPEC_HEMS."
+              fi
+            done < <(
+              find "$HEMS_ROOT" \
+                -mindepth 1 \
+                -maxdepth 1 \
+                -type d \
+                | sort
+            )
+          }
+
+          validate_area_structure() {
+            local area_name="$1"
+            local area_path="${HEMS_ROOT}/${area_name}"
+
+            echo ""
+            echo "============================================================"
+            echo "Checking area: $area_name"
+            echo "============================================================"
+
+            if [[ ! -d "$area_path" ]]; then
+              report_error \
+                "$area_path" \
+                "Required HEMS area folder is missing: $area_path"
+
+              return
+            fi
+
+            checked_areas=$((checked_areas + 1))
+
+            local function_count=0
+            local function_path
+            local function_name
+
+            while IFS= read -r function_path; do
+              [[ -z "$function_path" ]] && continue
+
+              function_count=$((function_count + 1))
+              checked_functions=$((checked_functions + 1))
+
+              function_name="$(basename "$function_path")"
+
+              echo ""
+              echo "Function:"
+              echo "  Name: $function_name"
+              echo "  Path: $function_path"
+
+              validate_function_name \
+                "$function_path" \
+                "$function_name"
+
+              local subfunction_count=0
+              local subfunction_path
+              local subfunction_name
+
+              while IFS= read -r subfunction_path; do
+                [[ -z "$subfunction_path" ]] && continue
+
+                subfunction_count=$((subfunction_count + 1))
+                checked_subfunctions=$((checked_subfunctions + 1))
+
+                subfunction_name="$(basename "$subfunction_path")"
+
+                echo "  Sub-function: $subfunction_name"
+
+                validate_subfunction_name \
+                  "$subfunction_path" \
+                  "$function_name" \
+                  "$subfunction_name"
+
+                local item_count=0
+                local item_path
+                local item_name
+
+                while IFS= read -r item_path; do
+                  [[ -z "$item_path" ]] && continue
+
+                  item_count=$((item_count + 1))
+                  checked_items=$((checked_items + 1))
+
+                  item_name="$(basename "$item_path")"
+
+                  echo "    Item: $item_name"
+
+                  validate_item_name \
+                    "$item_path" \
+                    "$subfunction_name" \
+                    "$item_name"
+
+                  local package_count=0
+                  local package_path
+                  local package_name
+
+                  while IFS= read -r package_path; do
+                    [[ -z "$package_path" ]] && continue
+
+                    package_count=$((package_count + 1))
+                    checked_packages=$((checked_packages + 1))
+
+                    package_name="$(basename "$package_path")"
+
+                    echo "      Package: $package_name"
+
+                    validate_package_name \
+                      "$package_path" \
+                      "$area_name" \
+                      "$item_name" \
+                      "$package_name"
+                  done < <(
+                    find "$item_path" \
+                      -mindepth 1 \
+                      -maxdepth 1 \
+                      -type d \
+                      | sort
+                  )
+
+                  if [[ "$package_count" -eq 0 ]]; then
+                    report_error \
+                      "$item_path" \
+                      "Item '$item_name' does not contain any package folders."
+                  fi
+                done < <(
+                  find "$subfunction_path" \
+                    -mindepth 1 \
+                    -maxdepth 1 \
+                    -type d \
+                    | sort
+                )
+
+                if [[ "$item_count" -eq 0 ]]; then
+                  report_error \
+                    "$subfunction_path" \
+                    "Sub-function '$subfunction_name' does not contain any item folders."
+                fi
+              done < <(
+                find "$function_path" \
+                  -mindepth 1 \
+                  -maxdepth 1 \
+                  -type d \
+                  | sort
+              )
+
+              if [[ "$subfunction_count" -eq 0 ]]; then
+                report_error \
+                  "$function_path" \
+                  "Function '$function_name' does not contain any sub-function folders."
+              fi
+            done < <(
+              find "$area_path" \
+                -mindepth 1 \
+                -maxdepth 1 \
+                -type d \
+                | sort
+            )
+
+            if [[ "$function_count" -eq 0 ]]; then
+              report_error \
+                "$area_path" \
+                "Area '$area_name' does not contain any function folders."
             fi
           }
 
-          check_manifest_exists() {
-            local manifest_file="$1"
-            local message="$2"
-
-            if [[ ! -f "$manifest_file" ]]; then
-              echo "::error::$message Missing manifest: $manifest_file"
-              fail=1
-            fi
-          }
-
-          echo "Checking CODE_HEMS packages..."
-
-          if [[ -d "$HEMS_ROOT/CODE_HEMS" ]]; then
-            while IFS= read -r code_dir; do
-              echo ""
-              echo "Checking code package: $code_dir"
-
-              reject_nested_folders "$code_dir" "Invalid code package structure."
-
-              check_manifest_exists "$code_dir/code-manifest.yaml" "Code manifest is required."
-              check_trace_links "$code_dir/trace_links.csv" "Code traceability file is required."
-
-              require_any_file "$code_dir" "At least one generated .c source file is required." "*.c"
-              require_any_file "$code_dir" "At least one generated .h header file is required." "*.h"
-
-              require_any_file "$code_dir" "Compiler log is required." "*compiler*log*" "*.log"
-              require_any_file "$code_dir" "Static analysis report is required." "*static*analysis*" "*lint*" "*mxam*"
-              require_any_file "$code_dir" "SIL or unit test output is required." "*sil*" "*unit*test*" "*unit*"
-              require_any_file "$code_dir" "Certification evidence is required." "*certification*" "*certificate*" "*cert*"
-
-            done < <(find "$HEMS_ROOT/CODE_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
-          else
-            echo "::error::HEMS/CODE_HEMS folder is missing."
-            fail=1
-          fi
-
-          echo ""
-          echo "Checking MOD_HEMS packages..."
-
-          if [[ -d "$HEMS_ROOT/MOD_HEMS" ]]; then
-            while IFS= read -r mod_dir; do
-              echo ""
-              echo "Checking module package: $mod_dir"
-
-              reject_nested_folders "$mod_dir" "Invalid module package structure."
-
-              check_manifest_exists "$mod_dir/module-manifest.yaml" "Module manifest is required."
-              check_trace_links "$mod_dir/trace_links.csv" "Module traceability file is required."
-
-              require_any_file "$mod_dir" "Simulink model file is required." "*.slx"
-              require_any_file "$mod_dir" "Dictionary file is required." "*.sldd"
-              require_any_file "$mod_dir" "Interface file is required." "*interface*.xlsx" "*interface*.xml" "*interface*.txt"
-              require_any_file "$mod_dir" "Variant file is required." "*variant*.xlsx" "*variant*.txt" "*variant*.slx"
-              require_any_file "$mod_dir" "Stimuli or test input file is required." "*.mat" "*stimuli*" "*test*input*" "*.csv" "*.xlsx"
-              require_any_file "$mod_dir" "Calibration file or calibration evidence is required." "*calibration*" "*.a2l" "*.html"
-              require_any_file "$mod_dir" "Analysis evidence is required." "*analysis*"
-              require_any_file "$mod_dir" "EAST or module report evidence is required." "*east*" "*report*" "*.pdf"
-              require_any_file "$mod_dir" "Delivery package or delivery evidence is required." "*delivery*" "*.zip"
-              require_any_file "$mod_dir" "SOF reference is required." "*sof*"
-              require_any_file "$mod_dir" "MDT reference is required." "*mdt*"
-
-            done < <(find "$HEMS_ROOT/MOD_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
-          else
-            echo "::error::HEMS/MOD_HEMS folder is missing."
-            fail=1
-          fi
-
-          echo ""
-          echo "Checking SPEC_HEMS packages..."
-
-          if [[ -d "$HEMS_ROOT/SPEC_HEMS" ]]; then
-            while IFS= read -r spec_dir; do
-              echo ""
-              echo "Checking specification package: $spec_dir"
-
-              reject_nested_folders "$spec_dir" "Invalid specification package structure."
-
-              check_manifest_exists "$spec_dir/spec-manifest.yaml" "Specification manifest is required."
-              check_trace_links "$spec_dir/trace_links.csv" "Specification traceability file is required."
-
-              require_any_file "$spec_dir" "Specification source file is required." "*source*" "*.xml" "*.xlsx" "*.txt"
-              require_any_file "$spec_dir" "Specification PDF file is required." "*.pdf"
-              require_any_file "$spec_dir" "Comparison report is required." "*comparison*"
-              require_any_file "$spec_dir" "History file is required." "*history*"
-              require_any_file "$spec_dir" "CRS or interface specification file is required." "*crs*" "*interface*"
-              require_any_file "$spec_dir" "SDT reference is required." "*sdt*"
-              require_any_file "$spec_dir" "Technical Fact reference is required." "*technical*fact*" "*tf*"
-
-            done < <(find "$HEMS_ROOT/SPEC_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
-          else
-            echo "::error::HEMS/SPEC_HEMS folder is missing."
-            fail=1
-          fi
-
-          echo ""
-          echo "Delivery check summary:"
-          if [[ "$fail" -ne 0 ]]; then
-            echo "Delivery check failed."
+          if [[ ! -d "$HEMS_ROOT" ]]; then
+            echo "::error::HEMS root folder is missing."
             exit 1
           fi
 
-          echo "Delivery check passed."
+          check_unexpected_area_folders
+
+          for area_name in "${ALLOWED_AREAS[@]}"; do
+            validate_area_structure "$area_name"
+          done
+
+          echo ""
+          echo "============================================================"
+          echo "Folder naming check summary"
+          echo "============================================================"
+          echo "Areas checked:        $checked_areas"
+          echo "Functions checked:    $checked_functions"
+          echo "Sub-functions checked: $checked_subfunctions"
+          echo "Items checked:        $checked_items"
+          echo "Packages checked:     $checked_packages"
+          echo ""
+
+          if [[ "$fail" -ne 0 ]]; then
+            echo "Delivery folder naming check failed."
+            exit 1
+          fi
+
+          echo "Delivery folder naming check passed."
