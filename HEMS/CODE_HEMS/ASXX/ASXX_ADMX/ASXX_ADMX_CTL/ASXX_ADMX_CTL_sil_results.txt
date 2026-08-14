@@ -1,3 +1,0 @@
-SIL/unit test result for ASXX_ADMX_CTL
-Status: PASS
-
