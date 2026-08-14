@@ -1,0 +1,7 @@
+component: a_ASXX_MAIN_CSM_obmxxxx1xg_A_RI_16_0(1.0)
+type: generated_code_package
+parent_item: ASXX_MAIN_CSM
+files:
+  - ASXX_MAIN_CSM_obmxxxx1xg.c
+  - ASXX_MAIN_CSM_obmxxxx1xg.h
+  - ASXX_MAIN_CSM_obmxxxx1xg_Memmap.h

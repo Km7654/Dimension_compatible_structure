@@ -1,0 +1,7 @@
+component: a_ATXX_DIAG_CSM_obmxxxx1xg_A_RI_16_0(1.0)
+type: generated_code_package
+parent_item: ATXX_DIAG_CSM
+files:
+  - ATXX_DIAG_CSM_obmxxxx1xg.c
+  - ATXX_DIAG_CSM_obmxxxx1xg.h
+  - ATXX_DIAG_CSM_obmxxxx1xg_Memmap.h

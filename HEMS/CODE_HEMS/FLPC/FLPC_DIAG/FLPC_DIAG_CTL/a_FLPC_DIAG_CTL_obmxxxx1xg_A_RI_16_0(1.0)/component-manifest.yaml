@@ -1,0 +1,7 @@
+component: a_FLPC_DIAG_CTL_obmxxxx1xg_A_RI_16_0(1.0)
+type: generated_code_package
+parent_item: FLPC_DIAG_CTL
+files:
+  - FLPC_DIAG_CTL_obmxxxx1xg.c
+  - FLPC_DIAG_CTL_obmxxxx1xg.h
+  - FLPC_DIAG_CTL_obmxxxx1xg_Memmap.h

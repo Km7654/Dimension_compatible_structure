@@ -1,0 +1,7 @@
+component: a_FLPC_DIAG_CSM_adacxxx2xg_A_RI_16_0(1.0)
+type: generated_code_package
+parent_item: FLPC_DIAG_CSM
+files:
+  - FLPC_DIAG_CSM_adacxxx2xg.c
+  - FLPC_DIAG_CSM_adacxxx2xg.h
+  - FLPC_DIAG_CSM_adacxxx2xg_Memmap.h

@@ -1,0 +1,10 @@
+component: a_ASXX_DGNX_CTL_adacxxx2xg_A_RI_16_0(1.0)
+type: model_package
+parent_item: ASXX_DGNX_CTL
+files:
+  - a_ASXX_DGNX_CTL_adacxxx2xg_A.slx
+  - a_ASXX_DGNX_CTL_adacxxx2xg_A.sldd
+  - a_ASXX_DGNX_CTL_adacxxx2xg_A_Variant.xlsx
+  - ASXX_DGNX_CTL_Module_Interface.xlsx
+  - ReportMR_a_ASXX_DGNX_CTL_adacxxx2xg_A.pdf
+  - ReportMRDICO_a_ASXX_DGNX_CTL_adacxxx2xg_A.xlsx

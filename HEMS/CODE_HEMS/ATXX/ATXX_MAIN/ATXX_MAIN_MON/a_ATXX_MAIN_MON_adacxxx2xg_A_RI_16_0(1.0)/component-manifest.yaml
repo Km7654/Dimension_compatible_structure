@@ -1,0 +1,7 @@
+component: a_ATXX_MAIN_MON_adacxxx2xg_A_RI_16_0(1.0)
+type: generated_code_package
+parent_item: ATXX_MAIN_MON
+files:
+  - ATXX_MAIN_MON_adacxxx2xg.c
+  - ATXX_MAIN_MON_adacxxx2xg.h
+  - ATXX_MAIN_MON_adacxxx2xg_Memmap.h

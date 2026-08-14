@@ -1,0 +1,24 @@
+module: ATXX_DIAG_MON
+type: code
+area: CODE_HEMS
+function: ATXX
+sub_function: ATXX_DIAG
+version: not_released
+delivery_cycle: not_released
+commit: not_released
+generated_by: create_nested_hems_structure.sh
+generated_on: placeholder
+structure_type: nested_generated_packages
+files:
+  - a_ATXX_DIAG_MON_adacxxx2xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_adacxxx2xg.c
+  - a_ATXX_DIAG_MON_adacxxx2xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_adacxxx2xg.h
+  - a_ATXX_DIAG_MON_adacxxx2xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_adacxxx2xg_Memmap.h
+  - a_ATXX_DIAG_MON_adacxxx2xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_ATXX_DIAG_MON_adacxxx4xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_adacxxx4xg.c
+  - a_ATXX_DIAG_MON_adacxxx4xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_adacxxx4xg.h
+  - a_ATXX_DIAG_MON_adacxxx4xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_adacxxx4xg_Memmap.h
+  - a_ATXX_DIAG_MON_adacxxx4xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_ATXX_DIAG_MON_obmxxxx1xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_obmxxxx1xg.c
+  - a_ATXX_DIAG_MON_obmxxxx1xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_obmxxxx1xg.h
+  - a_ATXX_DIAG_MON_obmxxxx1xg_A_RI_16_0(1.0)/ATXX_DIAG_MON_obmxxxx1xg_Memmap.h
+  - a_ATXX_DIAG_MON_obmxxxx1xg_A_RI_16_0(1.0)/component-manifest.yaml

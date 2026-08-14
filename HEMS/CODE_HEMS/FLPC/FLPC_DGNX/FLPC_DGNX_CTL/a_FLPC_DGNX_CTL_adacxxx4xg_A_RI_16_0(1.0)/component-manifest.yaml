@@ -1,0 +1,7 @@
+component: a_FLPC_DGNX_CTL_adacxxx4xg_A_RI_16_0(1.0)
+type: generated_code_package
+parent_item: FLPC_DGNX_CTL
+files:
+  - FLPC_DGNX_CTL_adacxxx4xg.c
+  - FLPC_DGNX_CTL_adacxxx4xg.h
+  - FLPC_DGNX_CTL_adacxxx4xg_Memmap.h

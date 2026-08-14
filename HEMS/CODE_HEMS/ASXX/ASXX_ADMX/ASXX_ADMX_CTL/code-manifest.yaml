@@ -3,38 +3,22 @@ type: code
 area: CODE_HEMS
 function: ASXX
 sub_function: ASXX_ADMX
-version: v1.0.2.8
-delivery_cycle: MD31_02
-commit: d0e55ff54c2df03400a9c0b77310ddff9b2c9b1f
-generated_by: GitHub Actions
-generated_on: 2026-07-28T07:12:29Z
+version: not_released
+delivery_cycle: not_released
+commit: not_released
+generated_by: create_nested_hems_structure.sh
+generated_on: placeholder
+structure_type: nested_generated_packages
 files:
-  - ASXX_ADMX_CTL.c
-  - ASXX_ADMX_CTL.h
-  - ASXX_ADMX_CTL_certification_report.txt
-  - ASXX_ADMX_CTL_compiler_log.txt
-  - ASXX_ADMX_CTL_sil_results.txt
-  - ASXX_ADMX_CTL_static_analysis_report.txt
-  - trace_links.csv
-
-item_version:
-  version: 5
-  tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v5
-  sha: baa8ffb43e09f579b93b40cbb120ef1821089360
-
-item_version_history:
-  - version: 1
-    tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v1
-    sha: 5fc6bfe271aaa696d68f29acd4830f876bfb0882
-  - version: 2
-    tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v2
-    sha: 22d482d2eede59ce3166140490b527b444dce1dc
-  - version: 3
-    tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v3
-    sha: 6ddb88d3e72247c97e548d4e85f96057a1828aa1
-  - version: 4
-    tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v4
-    sha: 3a1241ffb8231281eced18096525892517d93090
-  - version: 5
-    tag: item/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/v5
-    sha: baa8ffb43e09f579b93b40cbb120ef1821089360
+  - a_ASXX_ADMX_CTL_adacxxx2xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_adacxxx2xg.c
+  - a_ASXX_ADMX_CTL_adacxxx2xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_adacxxx2xg.h
+  - a_ASXX_ADMX_CTL_adacxxx2xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_adacxxx2xg_Memmap.h
+  - a_ASXX_ADMX_CTL_adacxxx2xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_ASXX_ADMX_CTL_adacxxx4xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_adacxxx4xg.c
+  - a_ASXX_ADMX_CTL_adacxxx4xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_adacxxx4xg.h
+  - a_ASXX_ADMX_CTL_adacxxx4xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_adacxxx4xg_Memmap.h
+  - a_ASXX_ADMX_CTL_adacxxx4xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_ASXX_ADMX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_obmxxxx1xg.c
+  - a_ASXX_ADMX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_obmxxxx1xg.h
+  - a_ASXX_ADMX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ASXX_ADMX_CTL_obmxxxx1xg_Memmap.h
+  - a_ASXX_ADMX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/component-manifest.yaml

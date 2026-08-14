@@ -1,0 +1,33 @@
+module: FLPC_DGNX_CTL
+type: module
+area: MOD_HEMS
+function: FLPC
+sub_function: FLPC_DGNX
+version: not_released
+delivery_cycle: not_released
+commit: not_released
+generated_by: create_nested_hems_structure.sh
+generated_on: placeholder
+structure_type: nested_generated_packages
+files:
+  - a_FLPC_DGNX_CTL_adacxxx2xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_adacxxx2xg_A.slx
+  - a_FLPC_DGNX_CTL_adacxxx2xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_adacxxx2xg_A.sldd
+  - a_FLPC_DGNX_CTL_adacxxx2xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_adacxxx2xg_A_Variant.xlsx
+  - a_FLPC_DGNX_CTL_adacxxx2xg_A_RI_16_0(1.0)/FLPC_DGNX_CTL_Module_Interface.xlsx
+  - a_FLPC_DGNX_CTL_adacxxx2xg_A_RI_16_0(1.0)/ReportMR_a_FLPC_DGNX_CTL_adacxxx2xg_A.pdf
+  - a_FLPC_DGNX_CTL_adacxxx2xg_A_RI_16_0(1.0)/ReportMRDICO_a_FLPC_DGNX_CTL_adacxxx2xg_A.xlsx
+  - a_FLPC_DGNX_CTL_adacxxx2xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_FLPC_DGNX_CTL_adacxxx4xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_adacxxx4xg_A.slx
+  - a_FLPC_DGNX_CTL_adacxxx4xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_adacxxx4xg_A.sldd
+  - a_FLPC_DGNX_CTL_adacxxx4xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_adacxxx4xg_A_Variant.xlsx
+  - a_FLPC_DGNX_CTL_adacxxx4xg_A_RI_16_0(1.0)/FLPC_DGNX_CTL_Module_Interface.xlsx
+  - a_FLPC_DGNX_CTL_adacxxx4xg_A_RI_16_0(1.0)/ReportMR_a_FLPC_DGNX_CTL_adacxxx4xg_A.pdf
+  - a_FLPC_DGNX_CTL_adacxxx4xg_A_RI_16_0(1.0)/ReportMRDICO_a_FLPC_DGNX_CTL_adacxxx4xg_A.xlsx
+  - a_FLPC_DGNX_CTL_adacxxx4xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_FLPC_DGNX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_obmxxxx1xg_A.slx
+  - a_FLPC_DGNX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_obmxxxx1xg_A.sldd
+  - a_FLPC_DGNX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/a_FLPC_DGNX_CTL_obmxxxx1xg_A_Variant.xlsx
+  - a_FLPC_DGNX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/FLPC_DGNX_CTL_Module_Interface.xlsx
+  - a_FLPC_DGNX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ReportMR_a_FLPC_DGNX_CTL_obmxxxx1xg_A.pdf
+  - a_FLPC_DGNX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ReportMRDICO_a_FLPC_DGNX_CTL_obmxxxx1xg_A.xlsx
+  - a_FLPC_DGNX_CTL_obmxxxx1xg_A_RI_16_0(1.0)/component-manifest.yaml

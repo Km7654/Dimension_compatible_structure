@@ -3,21 +3,31 @@ type: module
 area: MOD_HEMS
 function: ATXX
 sub_function: ATXX_DIAG
-version: v1.0.2.8
-delivery_cycle: MD31_02
-commit: d0e55ff54c2df03400a9c0b77310ddff9b2c9b1f
-generated_by: GitHub Actions
-generated_on: 2026-07-28T07:12:29Z
+version: not_released
+delivery_cycle: not_released
+commit: not_released
+generated_by: create_nested_hems_structure.sh
+generated_on: placeholder
+structure_type: nested_generated_packages
 files:
-  - ATXX_DIAG_CTL.slx
-  - ATXX_DIAG_CTL_analysis_report.txt
-  - ATXX_DIAG_CTL_calibration.html
-  - ATXX_DIAG_CTL_delivery_package.zip
-  - ATXX_DIAG_CTL_dictionary.sldd
-  - ATXX_DIAG_CTL_east_report.pdf
-  - ATXX_DIAG_CTL_interface.xlsx
-  - ATXX_DIAG_CTL_mdt_reference.txt
-  - ATXX_DIAG_CTL_sof_reference.txt
-  - ATXX_DIAG_CTL_stimuli.mat
-  - ATXX_DIAG_CTL_variant.xlsx
-  - trace_links.csv
+  - a_ATXX_DIAG_CTL_adacxxx2xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_adacxxx2xg_A.slx
+  - a_ATXX_DIAG_CTL_adacxxx2xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_adacxxx2xg_A.sldd
+  - a_ATXX_DIAG_CTL_adacxxx2xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_adacxxx2xg_A_Variant.xlsx
+  - a_ATXX_DIAG_CTL_adacxxx2xg_A_RI_16_0(1.0)/ATXX_DIAG_CTL_Module_Interface.xlsx
+  - a_ATXX_DIAG_CTL_adacxxx2xg_A_RI_16_0(1.0)/ReportMR_a_ATXX_DIAG_CTL_adacxxx2xg_A.pdf
+  - a_ATXX_DIAG_CTL_adacxxx2xg_A_RI_16_0(1.0)/ReportMRDICO_a_ATXX_DIAG_CTL_adacxxx2xg_A.xlsx
+  - a_ATXX_DIAG_CTL_adacxxx2xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_ATXX_DIAG_CTL_adacxxx4xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_adacxxx4xg_A.slx
+  - a_ATXX_DIAG_CTL_adacxxx4xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_adacxxx4xg_A.sldd
+  - a_ATXX_DIAG_CTL_adacxxx4xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_adacxxx4xg_A_Variant.xlsx
+  - a_ATXX_DIAG_CTL_adacxxx4xg_A_RI_16_0(1.0)/ATXX_DIAG_CTL_Module_Interface.xlsx
+  - a_ATXX_DIAG_CTL_adacxxx4xg_A_RI_16_0(1.0)/ReportMR_a_ATXX_DIAG_CTL_adacxxx4xg_A.pdf
+  - a_ATXX_DIAG_CTL_adacxxx4xg_A_RI_16_0(1.0)/ReportMRDICO_a_ATXX_DIAG_CTL_adacxxx4xg_A.xlsx
+  - a_ATXX_DIAG_CTL_adacxxx4xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_ATXX_DIAG_CTL_obmxxxx1xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_obmxxxx1xg_A.slx
+  - a_ATXX_DIAG_CTL_obmxxxx1xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_obmxxxx1xg_A.sldd
+  - a_ATXX_DIAG_CTL_obmxxxx1xg_A_RI_16_0(1.0)/a_ATXX_DIAG_CTL_obmxxxx1xg_A_Variant.xlsx
+  - a_ATXX_DIAG_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ATXX_DIAG_CTL_Module_Interface.xlsx
+  - a_ATXX_DIAG_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ReportMR_a_ATXX_DIAG_CTL_obmxxxx1xg_A.pdf
+  - a_ATXX_DIAG_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ReportMRDICO_a_ATXX_DIAG_CTL_obmxxxx1xg_A.xlsx
+  - a_ATXX_DIAG_CTL_obmxxxx1xg_A_RI_16_0(1.0)/component-manifest.yaml

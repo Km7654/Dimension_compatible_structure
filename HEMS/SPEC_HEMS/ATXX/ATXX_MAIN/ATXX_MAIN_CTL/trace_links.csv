@@ -1,4 +1,2 @@
-source,target,link_type
-spec,module,satisfies
-module,code,generates
-code,baseline,released_in
+source,target
+CB_REQ_ATXX_MAIN_CTL,SPEC_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL

@@ -1,0 +1,36 @@
+module: ATXX_CTRL_CSM
+type: specification
+area: SPEC_HEMS
+function: ATXX
+sub_function: ATXX_CTRL
+version: not_released
+delivery_cycle: not_released
+commit: not_released
+generated_by: create_nested_hems_structure.sh
+generated_on: placeholder
+structure_type: nested_generated_packages
+files:
+  - s_ATXX_CTRL_CSM_adacxxx2xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx2xg_source.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx2xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx2xg_specification.pdf
+  - s_ATXX_CTRL_CSM_adacxxx2xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx2xg_comparison_report.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx2xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx2xg_history.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx2xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx2xg_CRS_Interface.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx2xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx2xg_SDT_reference.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx2xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx2xg_Technical_Fact.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx2xg_SPEC_RI_16_0(1.0)/component-manifest.yaml
+  - s_ATXX_CTRL_CSM_adacxxx4xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx4xg_source.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx4xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx4xg_specification.pdf
+  - s_ATXX_CTRL_CSM_adacxxx4xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx4xg_comparison_report.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx4xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx4xg_history.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx4xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx4xg_CRS_Interface.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx4xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx4xg_SDT_reference.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx4xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_adacxxx4xg_Technical_Fact.xlsx
+  - s_ATXX_CTRL_CSM_adacxxx4xg_SPEC_RI_16_0(1.0)/component-manifest.yaml
+  - s_ATXX_CTRL_CSM_obmxxxx1xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_obmxxxx1xg_source.xlsx
+  - s_ATXX_CTRL_CSM_obmxxxx1xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_obmxxxx1xg_specification.pdf
+  - s_ATXX_CTRL_CSM_obmxxxx1xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_obmxxxx1xg_comparison_report.xlsx
+  - s_ATXX_CTRL_CSM_obmxxxx1xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_obmxxxx1xg_history.xlsx
+  - s_ATXX_CTRL_CSM_obmxxxx1xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_obmxxxx1xg_CRS_Interface.xlsx
+  - s_ATXX_CTRL_CSM_obmxxxx1xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_obmxxxx1xg_SDT_reference.xlsx
+  - s_ATXX_CTRL_CSM_obmxxxx1xg_SPEC_RI_16_0(1.0)/ATXX_CTRL_CSM_obmxxxx1xg_Technical_Fact.xlsx
+  - s_ATXX_CTRL_CSM_obmxxxx1xg_SPEC_RI_16_0(1.0)/component-manifest.yaml

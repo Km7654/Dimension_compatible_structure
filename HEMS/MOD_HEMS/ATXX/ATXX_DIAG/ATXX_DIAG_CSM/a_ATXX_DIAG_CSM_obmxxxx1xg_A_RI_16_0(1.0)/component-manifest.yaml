@@ -1,0 +1,10 @@
+component: a_ATXX_DIAG_CSM_obmxxxx1xg_A_RI_16_0(1.0)
+type: model_package
+parent_item: ATXX_DIAG_CSM
+files:
+  - a_ATXX_DIAG_CSM_obmxxxx1xg_A.slx
+  - a_ATXX_DIAG_CSM_obmxxxx1xg_A.sldd
+  - a_ATXX_DIAG_CSM_obmxxxx1xg_A_Variant.xlsx
+  - ATXX_DIAG_CSM_Module_Interface.xlsx
+  - ReportMR_a_ATXX_DIAG_CSM_obmxxxx1xg_A.pdf
+  - ReportMRDICO_a_ATXX_DIAG_CSM_obmxxxx1xg_A.xlsx

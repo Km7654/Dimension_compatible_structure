@@ -1,0 +1,24 @@
+module: ASXX_DGNX_CSM
+type: code
+area: CODE_HEMS
+function: ASXX
+sub_function: ASXX_DGNX
+version: not_released
+delivery_cycle: not_released
+commit: not_released
+generated_by: create_nested_hems_structure.sh
+generated_on: placeholder
+structure_type: nested_generated_packages
+files:
+  - a_ASXX_DGNX_CSM_adacxxx2xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_adacxxx2xg.c
+  - a_ASXX_DGNX_CSM_adacxxx2xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_adacxxx2xg.h
+  - a_ASXX_DGNX_CSM_adacxxx2xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_adacxxx2xg_Memmap.h
+  - a_ASXX_DGNX_CSM_adacxxx2xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_ASXX_DGNX_CSM_adacxxx4xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_adacxxx4xg.c
+  - a_ASXX_DGNX_CSM_adacxxx4xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_adacxxx4xg.h
+  - a_ASXX_DGNX_CSM_adacxxx4xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_adacxxx4xg_Memmap.h
+  - a_ASXX_DGNX_CSM_adacxxx4xg_A_RI_16_0(1.0)/component-manifest.yaml
+  - a_ASXX_DGNX_CSM_obmxxxx1xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_obmxxxx1xg.c
+  - a_ASXX_DGNX_CSM_obmxxxx1xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_obmxxxx1xg.h
+  - a_ASXX_DGNX_CSM_obmxxxx1xg_A_RI_16_0(1.0)/ASXX_DGNX_CSM_obmxxxx1xg_Memmap.h
+  - a_ASXX_DGNX_CSM_obmxxxx1xg_A_RI_16_0(1.0)/component-manifest.yaml

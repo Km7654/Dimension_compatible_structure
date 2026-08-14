@@ -1,0 +1,36 @@
+module: FLPC_MWOU_MON
+type: specification
+area: SPEC_HEMS
+function: FLPC
+sub_function: FLPC_MWOU
+version: not_released
+delivery_cycle: not_released
+commit: not_released
+generated_by: create_nested_hems_structure.sh
+generated_on: placeholder
+structure_type: nested_generated_packages
+files:
+  - s_FLPC_MWOU_MON_adacxxx2xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx2xg_source.xlsx
+  - s_FLPC_MWOU_MON_adacxxx2xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx2xg_specification.pdf
+  - s_FLPC_MWOU_MON_adacxxx2xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx2xg_comparison_report.xlsx
+  - s_FLPC_MWOU_MON_adacxxx2xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx2xg_history.xlsx
+  - s_FLPC_MWOU_MON_adacxxx2xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx2xg_CRS_Interface.xlsx
+  - s_FLPC_MWOU_MON_adacxxx2xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx2xg_SDT_reference.xlsx
+  - s_FLPC_MWOU_MON_adacxxx2xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx2xg_Technical_Fact.xlsx
+  - s_FLPC_MWOU_MON_adacxxx2xg_SPEC_RI_16_0(1.0)/component-manifest.yaml
+  - s_FLPC_MWOU_MON_adacxxx4xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx4xg_source.xlsx
+  - s_FLPC_MWOU_MON_adacxxx4xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx4xg_specification.pdf
+  - s_FLPC_MWOU_MON_adacxxx4xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx4xg_comparison_report.xlsx
+  - s_FLPC_MWOU_MON_adacxxx4xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx4xg_history.xlsx
+  - s_FLPC_MWOU_MON_adacxxx4xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx4xg_CRS_Interface.xlsx
+  - s_FLPC_MWOU_MON_adacxxx4xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx4xg_SDT_reference.xlsx
+  - s_FLPC_MWOU_MON_adacxxx4xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_adacxxx4xg_Technical_Fact.xlsx
+  - s_FLPC_MWOU_MON_adacxxx4xg_SPEC_RI_16_0(1.0)/component-manifest.yaml
+  - s_FLPC_MWOU_MON_obmxxxx1xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_obmxxxx1xg_source.xlsx
+  - s_FLPC_MWOU_MON_obmxxxx1xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_obmxxxx1xg_specification.pdf
+  - s_FLPC_MWOU_MON_obmxxxx1xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_obmxxxx1xg_comparison_report.xlsx
+  - s_FLPC_MWOU_MON_obmxxxx1xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_obmxxxx1xg_history.xlsx
+  - s_FLPC_MWOU_MON_obmxxxx1xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_obmxxxx1xg_CRS_Interface.xlsx
+  - s_FLPC_MWOU_MON_obmxxxx1xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_obmxxxx1xg_SDT_reference.xlsx
+  - s_FLPC_MWOU_MON_obmxxxx1xg_SPEC_RI_16_0(1.0)/FLPC_MWOU_MON_obmxxxx1xg_Technical_Fact.xlsx
+  - s_FLPC_MWOU_MON_obmxxxx1xg_SPEC_RI_16_0(1.0)/component-manifest.yaml

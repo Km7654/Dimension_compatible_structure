@@ -1,4 +1,2 @@
-source,target,link_type
-ATXX_DIAG_CTL_spec_source.xml,ATXX_DIAG_CTL_spec_document.pdf,documented_by
-ATXX_DIAG_CTL_crs_interface.xml,ATXX_DIAG_CTL_spec_source.xml,defines
-ATXX_DIAG_CTL_technical_fact_reference.txt,ATXX_DIAG_CTL_sdt_reference.txt,linked_to_sdt
+source,target
+CB_REQ_ATXX_DIAG_CTL,SPEC_HEMS/ATXX/ATXX_DIAG/ATXX_DIAG_CTL

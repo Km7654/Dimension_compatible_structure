@@ -1,4 +1,2 @@
-source,target,link_type
-spec,module,satisfies
-module,code,generates
-code,baseline,released_in
+source,target
+CB_REQ_ASXX_DGNX_CTL,SPEC_HEMS/ASXX/ASXX_DGNX/ASXX_DGNX_CTL
