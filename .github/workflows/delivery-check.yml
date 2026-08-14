@@ -37,10 +37,16 @@ jobs:
           HEMS_ROOT="HEMS"
           RELEASE_SUFFIX="RI_16_0(1.0)"
 
-          ALLOWED_AREAS=(
+          CONTROLLED_AREAS=(
             "CODE_HEMS"
             "MOD_HEMS"
             "SPEC_HEMS"
+          )
+
+          SUPPORT_AREAS=(
+            "BASELINES"
+            "DELIVERY_REQUESTS"
+            "INCOMING"
           )
 
           ALLOWED_VARIANTS=(
@@ -55,13 +61,24 @@ jobs:
           checked_subfunctions=0
           checked_items=0
           checked_packages=0
+          skipped_support_areas=0
 
           echo "============================================================"
           echo "HEMS folder naming structure check"
           echo "============================================================"
           echo ""
-          echo "Expected structure:"
+          echo "Controlled structure:"
           echo "HEMS/<AREA>/<Function>/<Sub-function>/<Item>/<PackageFolder>"
+          echo ""
+          echo "Controlled areas:"
+          for area in "${CONTROLLED_AREAS[@]}"; do
+            echo "  - $area"
+          done
+          echo ""
+          echo "Allowed support areas:"
+          for area in "${SUPPORT_AREAS[@]}"; do
+            echo "  - $area"
+          done
           echo ""
           echo "Naming relationships:"
           echo "1. Sub-function must start with <Function>_"
@@ -88,11 +105,11 @@ jobs:
             fail=1
           }
 
-          is_allowed_area() {
+          is_controlled_area() {
             local area_name="$1"
             local allowed_area
 
-            for allowed_area in "${ALLOWED_AREAS[@]}"; do
+            for allowed_area in "${CONTROLLED_AREAS[@]}"; do
               if [[ "$area_name" == "$allowed_area" ]]; then
                 return 0
               fi
@@ -101,12 +118,12 @@ jobs:
             return 1
           }
 
-          is_allowed_variant() {
-            local variant_name="$1"
-            local allowed_variant
+          is_support_area() {
+            local area_name="$1"
+            local support_area
 
-            for allowed_variant in "${ALLOWED_VARIANTS[@]}"; do
-              if [[ "$variant_name" == "$allowed_variant" ]]; then
+            for support_area in "${SUPPORT_AREAS[@]}"; do
+              if [[ "$area_name" == "$support_area" ]]; then
                 return 0
               fi
             done
@@ -138,6 +155,12 @@ jobs:
                 "$folder_path" \
                 "$folder_type folder name may contain only letters, numbers, and underscores. Found: '$folder_name'"
             fi
+
+            if [[ "$folder_name" == *_ ]]; then
+              report_error \
+                "$folder_path" \
+                "$folder_type folder name must not end with an underscore. Found: '$folder_name'"
+            fi
           }
 
           validate_function_name() {
@@ -148,12 +171,6 @@ jobs:
               "$function_path" \
               "$function_name" \
               "Function"
-
-            if [[ "$function_name" == *_ ]]; then
-              report_error \
-                "$function_path" \
-                "Function name must not end with an underscore. Found: '$function_name'"
-            fi
           }
 
           validate_subfunction_name() {
@@ -172,18 +189,14 @@ jobs:
               report_error \
                 "$subfunction_path" \
                 "Sub-function '$subfunction_name' must start with '${required_prefix}'."
+
+              return
             fi
 
             if [[ "$subfunction_name" == "$required_prefix" ]]; then
               report_error \
                 "$subfunction_path" \
                 "Sub-function '$subfunction_name' must contain a name after '${required_prefix}'."
-            fi
-
-            if [[ "$subfunction_name" == *_ ]]; then
-              report_error \
-                "$subfunction_path" \
-                "Sub-function name must not end with an underscore. Found: '$subfunction_name'"
             fi
           }
 
@@ -203,18 +216,14 @@ jobs:
               report_error \
                 "$item_path" \
                 "Item '$item_name' must start with '${required_prefix}'."
+
+              return
             fi
 
             if [[ "$item_name" == "$required_prefix" ]]; then
               report_error \
                 "$item_path" \
                 "Item '$item_name' must contain a name after '${required_prefix}'."
-            fi
-
-            if [[ "$item_name" == *_ ]]; then
-              report_error \
-                "$item_path" \
-                "Item name must not end with an underscore. Found: '$item_name'"
             fi
           }
 
@@ -264,20 +273,32 @@ jobs:
             fail=1
           }
 
-          check_unexpected_area_folders() {
+          check_top_level_hems_folders() {
             local area_path
             local area_name
+
+            echo "Checking top-level HEMS folders..."
+            echo ""
 
             while IFS= read -r area_path; do
               [[ -z "$area_path" ]] && continue
 
               area_name="$(basename "$area_path")"
 
-              if ! is_allowed_area "$area_name"; then
-                report_error \
-                  "$area_path" \
-                  "Unexpected folder '$area_name' directly under HEMS. Allowed folders are CODE_HEMS, MOD_HEMS, and SPEC_HEMS."
+              if is_controlled_area "$area_name"; then
+                echo "Controlled HEMS area found: $area_path"
+                continue
               fi
+
+              if is_support_area "$area_name"; then
+                echo "Skipping allowed HEMS support area: $area_path"
+                skipped_support_areas=$((skipped_support_areas + 1))
+                continue
+              fi
+
+              report_error \
+                "$area_path" \
+                "Unexpected folder '$area_name' directly under HEMS. Allowed controlled areas are CODE_HEMS, MOD_HEMS, and SPEC_HEMS. Allowed support areas are BASELINES, DELIVERY_REQUESTS, and INCOMING."
             done < <(
               find "$HEMS_ROOT" \
                 -mindepth 1 \
@@ -384,6 +405,7 @@ jobs:
                       "$area_name" \
                       "$item_name" \
                       "$package_name"
+
                   done < <(
                     find "$item_path" \
                       -mindepth 1 \
@@ -397,6 +419,7 @@ jobs:
                       "$item_path" \
                       "Item '$item_name' does not contain any package folders."
                   fi
+
                 done < <(
                   find "$subfunction_path" \
                     -mindepth 1 \
@@ -410,6 +433,7 @@ jobs:
                     "$subfunction_path" \
                     "Sub-function '$subfunction_name' does not contain any item folders."
                 fi
+
               done < <(
                 find "$function_path" \
                   -mindepth 1 \
@@ -423,6 +447,7 @@ jobs:
                   "$function_path" \
                   "Function '$function_name' does not contain any sub-function folders."
               fi
+
             done < <(
               find "$area_path" \
                 -mindepth 1 \
@@ -443,9 +468,9 @@ jobs:
             exit 1
           fi
 
-          check_unexpected_area_folders
+          check_top_level_hems_folders
 
-          for area_name in "${ALLOWED_AREAS[@]}"; do
+          for area_name in "${CONTROLLED_AREAS[@]}"; do
             validate_area_structure "$area_name"
           done
 
@@ -453,11 +478,12 @@ jobs:
           echo "============================================================"
           echo "Folder naming check summary"
           echo "============================================================"
-          echo "Areas checked:        $checked_areas"
-          echo "Functions checked:    $checked_functions"
-          echo "Sub-functions checked: $checked_subfunctions"
-          echo "Items checked:        $checked_items"
-          echo "Packages checked:     $checked_packages"
+          echo "Controlled areas checked: $checked_areas"
+          echo "Support areas skipped:    $skipped_support_areas"
+          echo "Functions checked:        $checked_functions"
+          echo "Sub-functions checked:    $checked_subfunctions"
+          echo "Items checked:            $checked_items"
+          echo "Packages checked:         $checked_packages"
           echo ""
 
           if [[ "$fail" -ne 0 ]]; then
