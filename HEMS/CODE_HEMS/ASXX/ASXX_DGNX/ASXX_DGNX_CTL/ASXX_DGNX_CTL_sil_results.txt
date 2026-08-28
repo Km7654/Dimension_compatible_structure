@@ -1,2 +1,0 @@
-SIL/unit test result for ASXX_DGNX_CTL
-Status: PASS

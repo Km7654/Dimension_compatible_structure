@@ -1,4 +1,0 @@
-source,target,link_type
-ATXX_DIAG_CTL.c,ATXX_DIAG_CTL.h,includes
-ATXX_DIAG_CTL.c,ATXX_DIAG_CTL_static_analysis_report.txt,validated_by
-ATXX_DIAG_CTL.c,ATXX_DIAG_CTL_sil_results.txt,tested_by

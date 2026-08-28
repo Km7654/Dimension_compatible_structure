@@ -1,2 +1,0 @@
-Compiler log for ASXX_ADMX_CTL
-Status: PASS
