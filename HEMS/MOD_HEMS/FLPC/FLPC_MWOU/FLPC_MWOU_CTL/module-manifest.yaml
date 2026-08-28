@@ -1,0 +1,30 @@
+module: FLPC_MWOU_CTL
+type: module
+area: MOD_HEMS
+function: FLPC
+sub_function: FLPC_MWOU
+version: 1
+delivery_cycle: not_released
+commit: b4012461197480f31b144e5614ae84aaa3181c2c
+generated_by: GitHub Actions
+generated_on: 2026-08-28T10:54:04Z
+structure_type: nested_generated_packages
+files:
+  - a_FLPC_MWOU_CTL_T_A/FLPC_MWOU_CTL_Module_Interface.xlsx
+  - a_FLPC_MWOU_CTL_T_A/MXAM_Report_[4_selected_artifacts]_2026.xlsx
+  - a_FLPC_MWOU_CTL_T_A/a_FLPC_MWOU_CTL_T_A.slx
+  - a_FLPC_MWOU_CTL_T_A/a_FLPC_MWOU_CTL_T_A_Variant.xlsx
+
+item_version:
+  version: 1
+  tag: item/MOD_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/v1
+  sha: b4012461197480f31b144e5614ae84aaa3181c2c
+  pr: 20
+  updated_utc: "2026-08-28T10:54:04Z"
+
+item_version_history:
+  - version: 1
+    tag: item/MOD_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/v1
+    sha: b4012461197480f31b144e5614ae84aaa3181c2c
+    pr: 20
+    updated_utc: "2026-08-28T10:54:04Z"
