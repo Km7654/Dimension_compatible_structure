@@ -24,10 +24,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Checkout repository using Git with full history
+        shell: bash
+        env:
+          CHECKOUT_TOKEN: ${{ github.token }}
+          CHECKOUT_SHA: ${{ github.sha }}
+          CHECKOUT_REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          set -euo pipefail
+
+          REPOSITORY_URL="${SERVER_URL}/${REPOSITORY}.git"
+          BASIC_AUTH="$(printf 'x-access-token:%s' "$CHECKOUT_TOKEN" | base64 | tr -d '\n')"
+
+          git init .
+          git remote add origin "$REPOSITORY_URL"
+          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${BASIC_AUTH}"
+
+          cleanup_credentials() {
+            git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
+          }
+          trap cleanup_credentials EXIT
+
+          # Fetch complete branch and tag history for changed-file comparison.
+          git fetch --no-tags --prune origin             "+refs/heads/*:refs/remotes/origin/*"
+          git fetch --tags --prune origin             "+refs/tags/*:refs/tags/*"
+
+          # Fetch the event ref separately. Pull-request refs are not included
+          # in refs/heads, but github.ref identifies the required merge ref.
+          git fetch --no-tags origin "+${CHECKOUT_REF}:${CHECKOUT_REF}"
+
+          if ! git cat-file -e "${CHECKOUT_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$CHECKOUT_SHA"
+          fi
+
+          git checkout --force --detach "$CHECKOUT_SHA"
+          git clean -ffdx
+
+          cleanup_credentials
+          trap - EXIT
 
       - name: Determine changed files
         shell: bash
@@ -91,9 +127,16 @@ jobs:
           validate_simple_name() {
             local path="$1" name="$2" type="$3"
             [[ -n "$name" ]] || { report_error "$path" "$type name must not be empty."; return; }
-            [[ ! "$name" =~ [[:space:]] ]] || report_error "$path" "$type name must not contain spaces: '$name'."
-            [[ "$name" =~ ^[A-Za-z0-9_]+$ ]] || report_error "$path" "$type name may contain only letters, numbers, and underscores: '$name'."
-            [[ "$name" != *_ ]] || report_error "$path" "$type name must not end with an underscore: '$name'."
+            if [[ "$name" =~ [[:space:]] ]]; then
+              report_error "$path" "$type name must not contain spaces: '$name'."
+            fi
+            if [[ ! "$name" =~ ^[A-Za-z0-9_]+$ ]]; then
+              report_error "$path" "$type name may contain only letters, numbers, and underscores: '$name'."
+            fi
+            if [[ "$name" == *_ ]]; then
+              report_error "$path" "$type name must not end with an underscore: '$name'."
+            fi
+            return 0
           }
 
           validate_hierarchy() {
@@ -101,8 +144,13 @@ jobs:
             validate_simple_name "$path" "$function_name" "Function"
             validate_simple_name "$path" "$subfunction_name" "Sub-function"
             validate_simple_name "$path" "$module_name" "Module"
-            [[ "$subfunction_name" == "${function_name}_"* && "$subfunction_name" != "${function_name}_" ]] || report_error "$path" "Sub-function '$subfunction_name' must start with '${function_name}_' and include a name."
-            [[ "$module_name" == "${subfunction_name}_"* && "$module_name" != "${subfunction_name}_" ]] || report_error "$path" "Module '$module_name' must start with '${subfunction_name}_' and include a name."
+            if [[ "$subfunction_name" != "${function_name}_"* || "$subfunction_name" == "${function_name}_" ]]; then
+              report_error "$path" "Sub-function '$subfunction_name' must start with '${function_name}_' and include a name."
+            fi
+            if [[ "$module_name" != "${subfunction_name}_"* || "$module_name" == "${subfunction_name}_" ]]; then
+              report_error "$path" "Module '$module_name' must start with '${subfunction_name}_' and include a name."
+            fi
+            return 0
           }
 
           validate_package_name() {
@@ -111,7 +159,10 @@ jobs:
             case "$area" in
               MOD_HEMS)
                 expected="a_${module_name}_T_A"
-                [[ "$package" == "$expected" ]] || report_error "$path" "Invalid MOD_HEMS package '$package'. Expected '$expected'."
+                if [[ "$package" != "$expected" ]]; then
+                  report_error "$path" "Invalid MOD_HEMS package '$package'. Expected '$expected'."
+                fi
+                return 0
                 ;;
               SPEC_HEMS)
                 for variant in "${ALLOWED_VARIANTS[@]}"; do [[ "$package" == "a_${module_name}_${variant}_A" ]] && return 0; done

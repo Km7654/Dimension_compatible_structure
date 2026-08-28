@@ -24,8 +24,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout repository using Git
+        shell: bash
+        env:
+          CHECKOUT_TOKEN: ${{ github.token }}
+          CHECKOUT_SHA: ${{ github.sha }}
+          CHECKOUT_REF: ${{ github.ref }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          set -euo pipefail
+
+          REPOSITORY_URL="${SERVER_URL}/${REPOSITORY}.git"
+          BASIC_AUTH="$(printf 'x-access-token:%s' "$CHECKOUT_TOKEN" | base64 | tr -d '\n')"
+
+          git init .
+          git remote add origin "$REPOSITORY_URL"
+          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${BASIC_AUTH}"
+
+          cleanup_credentials() {
+            git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
+          }
+          trap cleanup_credentials EXIT
+
+          # Fetch the workflow ref first. This supports branches, tags,
+          # pull-request merge refs, and manually dispatched workflows.
+          git fetch --no-tags --depth=1 origin "+${CHECKOUT_REF}:${CHECKOUT_REF}"
+
+          if ! git cat-file -e "${CHECKOUT_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --depth=1 origin "$CHECKOUT_SHA"
+          fi
+
+          git checkout --force --detach "$CHECKOUT_SHA"
+          git clean -ffdx
+
+          cleanup_credentials
+          trap - EXIT
 
       - name: Validate HEMS folder naming structure
         shell: bash
@@ -82,25 +116,40 @@ jobs:
               report_error "$folder_path" "$folder_type folder name must not be empty."
               return
             fi
-            [[ "$folder_name" =~ [[:space:]] ]] && report_error "$folder_path" "$folder_type folder name must not contain spaces. Found: '$folder_name'"
-            [[ ! "$folder_name" =~ ^[A-Za-z0-9_]+$ ]] && report_error "$folder_path" "$folder_type folder name may contain only letters, numbers, and underscores. Found: '$folder_name'"
-            [[ "$folder_name" == *_ ]] && report_error "$folder_path" "$folder_type folder name must not end with an underscore. Found: '$folder_name'"
+            if [[ "$folder_name" =~ [[:space:]] ]]; then
+              report_error "$folder_path" "$folder_type folder name must not contain spaces. Found: '$folder_name'"
+            fi
+            if [[ ! "$folder_name" =~ ^[A-Za-z0-9_]+$ ]]; then
+              report_error "$folder_path" "$folder_type folder name may contain only letters, numbers, and underscores. Found: '$folder_name'"
+            fi
+            if [[ "$folder_name" == *_ ]]; then
+              report_error "$folder_path" "$folder_type folder name must not end with an underscore. Found: '$folder_name'"
+            fi
+            return 0
           }
 
           validate_subfunction_name() {
             local path="$1" function_name="$2" subfunction_name="$3"
             validate_simple_folder_name "$path" "$subfunction_name" "Sub-function"
             local prefix="${function_name}_"
-            [[ "$subfunction_name" != "${prefix}"* ]] && report_error "$path" "Sub-function '$subfunction_name' must start with '$prefix'."
-            [[ "$subfunction_name" == "$prefix" ]] && report_error "$path" "Sub-function '$subfunction_name' must contain a name after '$prefix'."
+            if [[ "$subfunction_name" != "${prefix}"* ]]; then
+              report_error "$path" "Sub-function '$subfunction_name' must start with '$prefix'."
+            elif [[ "$subfunction_name" == "$prefix" ]]; then
+              report_error "$path" "Sub-function '$subfunction_name' must contain a name after '$prefix'."
+            fi
+            return 0
           }
 
           validate_module_name() {
             local path="$1" subfunction_name="$2" module_name="$3"
             validate_simple_folder_name "$path" "$module_name" "Module"
             local prefix="${subfunction_name}_"
-            [[ "$module_name" != "${prefix}"* ]] && report_error "$path" "Module '$module_name' must start with '$prefix'."
-            [[ "$module_name" == "$prefix" ]] && report_error "$path" "Module '$module_name' must contain a name after '$prefix'."
+            if [[ "$module_name" != "${prefix}"* ]]; then
+              report_error "$path" "Module '$module_name' must start with '$prefix'."
+            elif [[ "$module_name" == "$prefix" ]]; then
+              report_error "$path" "Module '$module_name' must contain a name after '$prefix'."
+            fi
+            return 0
           }
 
           validate_package_name() {
@@ -110,7 +159,10 @@ jobs:
             case "$area_name" in
               MOD_HEMS)
                 expected="a_${module_name}_T_A"
-                [[ "$package_name" != "$expected" ]] && report_error "$package_path" "Invalid MOD_HEMS package '$package_name'. Expected '$expected'."
+                if [[ "$package_name" != "$expected" ]]; then
+                  report_error "$package_path" "Invalid MOD_HEMS package '$package_name'. Expected '$expected'."
+                fi
+                return 0
                 ;;
               SPEC_HEMS)
                 for variant in "${ALLOWED_VARIANTS[@]}"; do
