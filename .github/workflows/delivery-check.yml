@@ -6,7 +6,6 @@ on:
       - main
       - production
       - "release/**"
-
   push:
     branches:
       - main
@@ -14,7 +13,6 @@ on:
       - "release/**"
       - "test/**"
       - "feature/**"
-
   workflow_dispatch:
 
 permissions:
@@ -37,97 +35,41 @@ jobs:
           HEMS_ROOT="HEMS"
           RELEASE_SUFFIX="RI_16_0(1.0)"
 
-          CONTROLLED_AREAS=(
-            "CODE_HEMS"
-            "MOD_HEMS"
-            "SPEC_HEMS"
-          )
-
-          SUPPORT_AREAS=(
-            "BASELINES"
-            "DELIVERY_REQUESTS"
-            "INCOMING"
-          )
-
-          ALLOWED_VARIANTS=(
-            "adacxxx2xg"
-            "adacxxx4xg"
-            "obmxxxx1xg"
-          )
+          CONTROLLED_AREAS=("CODE_HEMS" "MOD_HEMS" "SPEC_HEMS")
+          SUPPORT_AREAS=("BASELINES" "DELIVERY_REQUESTS" "INCOMING")
+          ALLOWED_VARIANTS=("adacxxx2xg" "adacxxx4xg" "obmxxxx1xg" "obmxxxx2xg")
 
           fail=0
           checked_areas=0
           checked_functions=0
           checked_subfunctions=0
-          checked_items=0
+          checked_modules=0
           checked_packages=0
           skipped_support_areas=0
 
           echo "============================================================"
           echo "HEMS folder naming structure check"
           echo "============================================================"
+          echo "HEMS/<AREA>/<Function>/<Function_SubFunction>/<Function_SubFunction_Module>/<PackageFolder>"
           echo ""
-          echo "Controlled structure:"
-          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Item>/<PackageFolder>"
-          echo ""
-          echo "Controlled areas:"
-          for area in "${CONTROLLED_AREAS[@]}"; do
-            echo "  - $area"
-          done
-          echo ""
-          echo "Allowed support areas:"
-          for area in "${SUPPORT_AREAS[@]}"; do
-            echo "  - $area"
-          done
-          echo ""
-          echo "Naming relationships:"
-          echo "1. Sub-function must start with <Function>_"
-          echo "2. Item must start with <Sub-function>_"
-          echo "3. Package folder must contain the complete item name"
-          echo ""
-          echo "CODE_HEMS and MOD_HEMS package format:"
-          echo "a_<Item>_<Variant>_A_${RELEASE_SUFFIX}"
-          echo ""
-          echo "SPEC_HEMS package format:"
-          echo "s_<Item>_<Variant>_SPEC_${RELEASE_SUFFIX}"
-          echo ""
-          echo "Allowed variants:"
-          for variant in "${ALLOWED_VARIANTS[@]}"; do
-            echo "  - $variant"
-          done
-          echo ""
+          echo "MOD_HEMS package:  a_<Module>_T_A"
+          echo "SPEC_HEMS package: a_<Module>_<Variant>_A"
+          echo "CODE_HEMS package: a_<Module>_<Variant>_A_${RELEASE_SUFFIX}"
 
           report_error() {
             local path="$1"
             local message="$2"
-
             echo "::error file=$path::$message"
             fail=1
           }
 
-          is_controlled_area() {
-            local area_name="$1"
-            local allowed_area
-
-            for allowed_area in "${CONTROLLED_AREAS[@]}"; do
-              if [[ "$area_name" == "$allowed_area" ]]; then
-                return 0
-              fi
+          array_contains() {
+            local sought="$1"
+            shift
+            local value
+            for value in "$@"; do
+              [[ "$value" == "$sought" ]] && return 0
             done
-
-            return 1
-          }
-
-          is_support_area() {
-            local area_name="$1"
-            local support_area
-
-            for support_area in "${SUPPORT_AREAS[@]}"; do
-              if [[ "$area_name" == "$support_area" ]]; then
-                return 0
-              fi
-            done
-
             return 1
           }
 
@@ -137,358 +79,137 @@ jobs:
             local folder_type="$3"
 
             if [[ -z "$folder_name" ]]; then
-              report_error \
-                "$folder_path" \
-                "$folder_type folder name must not be empty."
-
+              report_error "$folder_path" "$folder_type folder name must not be empty."
               return
             fi
-
-            if [[ "$folder_name" =~ [[:space:]] ]]; then
-              report_error \
-                "$folder_path" \
-                "$folder_type folder name must not contain spaces. Found: '$folder_name'"
-            fi
-
-            if [[ ! "$folder_name" =~ ^[A-Za-z0-9_]+$ ]]; then
-              report_error \
-                "$folder_path" \
-                "$folder_type folder name may contain only letters, numbers, and underscores. Found: '$folder_name'"
-            fi
-
-            if [[ "$folder_name" == *_ ]]; then
-              report_error \
-                "$folder_path" \
-                "$folder_type folder name must not end with an underscore. Found: '$folder_name'"
-            fi
-          }
-
-          validate_function_name() {
-            local function_path="$1"
-            local function_name="$2"
-
-            validate_simple_folder_name \
-              "$function_path" \
-              "$function_name" \
-              "Function"
+            [[ "$folder_name" =~ [[:space:]] ]] && report_error "$folder_path" "$folder_type folder name must not contain spaces. Found: '$folder_name'"
+            [[ ! "$folder_name" =~ ^[A-Za-z0-9_]+$ ]] && report_error "$folder_path" "$folder_type folder name may contain only letters, numbers, and underscores. Found: '$folder_name'"
+            [[ "$folder_name" == *_ ]] && report_error "$folder_path" "$folder_type folder name must not end with an underscore. Found: '$folder_name'"
           }
 
           validate_subfunction_name() {
-            local subfunction_path="$1"
-            local function_name="$2"
-            local subfunction_name="$3"
-
-            validate_simple_folder_name \
-              "$subfunction_path" \
-              "$subfunction_name" \
-              "Sub-function"
-
-            local required_prefix="${function_name}_"
-
-            if [[ "$subfunction_name" != "${required_prefix}"* ]]; then
-              report_error \
-                "$subfunction_path" \
-                "Sub-function '$subfunction_name' must start with '${required_prefix}'."
-
-              return
-            fi
-
-            if [[ "$subfunction_name" == "$required_prefix" ]]; then
-              report_error \
-                "$subfunction_path" \
-                "Sub-function '$subfunction_name' must contain a name after '${required_prefix}'."
-            fi
+            local path="$1" function_name="$2" subfunction_name="$3"
+            validate_simple_folder_name "$path" "$subfunction_name" "Sub-function"
+            local prefix="${function_name}_"
+            [[ "$subfunction_name" != "${prefix}"* ]] && report_error "$path" "Sub-function '$subfunction_name' must start with '$prefix'."
+            [[ "$subfunction_name" == "$prefix" ]] && report_error "$path" "Sub-function '$subfunction_name' must contain a name after '$prefix'."
           }
 
-          validate_item_name() {
-            local item_path="$1"
-            local subfunction_name="$2"
-            local item_name="$3"
-
-            validate_simple_folder_name \
-              "$item_path" \
-              "$item_name" \
-              "Item"
-
-            local required_prefix="${subfunction_name}_"
-
-            if [[ "$item_name" != "${required_prefix}"* ]]; then
-              report_error \
-                "$item_path" \
-                "Item '$item_name' must start with '${required_prefix}'."
-
-              return
-            fi
-
-            if [[ "$item_name" == "$required_prefix" ]]; then
-              report_error \
-                "$item_path" \
-                "Item '$item_name' must contain a name after '${required_prefix}'."
-            fi
+          validate_module_name() {
+            local path="$1" subfunction_name="$2" module_name="$3"
+            validate_simple_folder_name "$path" "$module_name" "Module"
+            local prefix="${subfunction_name}_"
+            [[ "$module_name" != "${prefix}"* ]] && report_error "$path" "Module '$module_name' must start with '$prefix'."
+            [[ "$module_name" == "$prefix" ]] && report_error "$path" "Module '$module_name' must contain a name after '$prefix'."
           }
 
           validate_package_name() {
-            local package_path="$1"
-            local area_name="$2"
-            local item_name="$3"
-            local package_name="$4"
+            local package_path="$1" area_name="$2" module_name="$3" package_name="$4"
+            local expected variant
 
-            local matched=0
-            local variant
-            local expected_package_name
-
-            for variant in "${ALLOWED_VARIANTS[@]}"; do
-              if [[ "$area_name" == "SPEC_HEMS" ]]; then
-                expected_package_name="s_${item_name}_${variant}_SPEC_${RELEASE_SUFFIX}"
-              else
-                expected_package_name="a_${item_name}_${variant}_A_${RELEASE_SUFFIX}"
-              fi
-
-              if [[ "$package_name" == "$expected_package_name" ]]; then
-                matched=1
-                break
-              fi
-            done
-
-            if [[ "$matched" -eq 1 ]]; then
-              return
-            fi
-
-            echo "::error file=$package_path::Invalid package folder name '$package_name'."
-            echo "Area: $area_name"
-            echo "Parent item: $item_name"
-            echo ""
-            echo "Expected one of the following package-folder names:"
-
-            for variant in "${ALLOWED_VARIANTS[@]}"; do
-              if [[ "$area_name" == "SPEC_HEMS" ]]; then
-                expected_package_name="s_${item_name}_${variant}_SPEC_${RELEASE_SUFFIX}"
-              else
-                expected_package_name="a_${item_name}_${variant}_A_${RELEASE_SUFFIX}"
-              fi
-
-              echo "  - $expected_package_name"
-            done
-
-            fail=1
+            case "$area_name" in
+              MOD_HEMS)
+                expected="a_${module_name}_T_A"
+                [[ "$package_name" != "$expected" ]] && report_error "$package_path" "Invalid MOD_HEMS package '$package_name'. Expected '$expected'."
+                ;;
+              SPEC_HEMS)
+                for variant in "${ALLOWED_VARIANTS[@]}"; do
+                  expected="a_${module_name}_${variant}_A"
+                  [[ "$package_name" == "$expected" ]] && return 0
+                done
+                report_error "$package_path" "Invalid SPEC_HEMS package '$package_name'. Expected a_${module_name}_<allowed-variant>_A."
+                ;;
+              CODE_HEMS)
+                for variant in "${ALLOWED_VARIANTS[@]}"; do
+                  expected="a_${module_name}_${variant}_A_${RELEASE_SUFFIX}"
+                  [[ "$package_name" == "$expected" ]] && return 0
+                done
+                report_error "$package_path" "Invalid CODE_HEMS package '$package_name'. Expected a_${module_name}_<allowed-variant>_A_${RELEASE_SUFFIX}."
+                ;;
+            esac
           }
 
           check_top_level_hems_folders() {
-            local area_path
-            local area_name
-
-            echo "Checking top-level HEMS folders..."
-            echo ""
-
+            local area_path area_name
             while IFS= read -r area_path; do
               [[ -z "$area_path" ]] && continue
-
               area_name="$(basename "$area_path")"
-
-              if is_controlled_area "$area_name"; then
+              if array_contains "$area_name" "${CONTROLLED_AREAS[@]}"; then
                 echo "Controlled HEMS area found: $area_path"
-                continue
-              fi
-
-              if is_support_area "$area_name"; then
-                echo "Skipping allowed HEMS support area: $area_path"
+              elif array_contains "$area_name" "${SUPPORT_AREAS[@]}"; then
+                echo "Skipping allowed support area: $area_path"
                 skipped_support_areas=$((skipped_support_areas + 1))
-                continue
+              else
+                report_error "$area_path" "Unexpected folder '$area_name' directly under HEMS."
               fi
-
-              report_error \
-                "$area_path" \
-                "Unexpected folder '$area_name' directly under HEMS. Allowed controlled areas are CODE_HEMS, MOD_HEMS, and SPEC_HEMS. Allowed support areas are BASELINES, DELIVERY_REQUESTS, and INCOMING."
-            done < <(
-              find "$HEMS_ROOT" \
-                -mindepth 1 \
-                -maxdepth 1 \
-                -type d \
-                | sort
-            )
+            done < <(find "$HEMS_ROOT" -mindepth 1 -maxdepth 1 -type d | sort)
           }
 
           validate_area_structure() {
             local area_name="$1"
             local area_path="${HEMS_ROOT}/${area_name}"
-
             echo ""
-            echo "============================================================"
             echo "Checking area: $area_name"
-            echo "============================================================"
 
             if [[ ! -d "$area_path" ]]; then
-              report_error \
-                "$area_path" \
-                "Required HEMS area folder is missing: $area_path"
-
+              report_error "$area_path" "Required HEMS area folder is missing."
               return
             fi
-
             checked_areas=$((checked_areas + 1))
 
-            local function_count=0
-            local function_path
-            local function_name
-
+            local function_count=0 function_path function_name
             while IFS= read -r function_path; do
               [[ -z "$function_path" ]] && continue
-
-              function_count=$((function_count + 1))
-              checked_functions=$((checked_functions + 1))
-
+              function_count=$((function_count + 1)); checked_functions=$((checked_functions + 1))
               function_name="$(basename "$function_path")"
+              validate_simple_folder_name "$function_path" "$function_name" "Function"
 
-              echo ""
-              echo "Function:"
-              echo "  Name: $function_name"
-              echo "  Path: $function_path"
-
-              validate_function_name \
-                "$function_path" \
-                "$function_name"
-
-              local subfunction_count=0
-              local subfunction_path
-              local subfunction_name
-
+              local subfunction_count=0 subfunction_path subfunction_name
               while IFS= read -r subfunction_path; do
                 [[ -z "$subfunction_path" ]] && continue
-
-                subfunction_count=$((subfunction_count + 1))
-                checked_subfunctions=$((checked_subfunctions + 1))
-
+                subfunction_count=$((subfunction_count + 1)); checked_subfunctions=$((checked_subfunctions + 1))
                 subfunction_name="$(basename "$subfunction_path")"
+                validate_subfunction_name "$subfunction_path" "$function_name" "$subfunction_name"
 
-                echo "  Sub-function: $subfunction_name"
+                local module_count=0 module_path module_name
+                while IFS= read -r module_path; do
+                  [[ -z "$module_path" ]] && continue
+                  module_count=$((module_count + 1)); checked_modules=$((checked_modules + 1))
+                  module_name="$(basename "$module_path")"
+                  validate_module_name "$module_path" "$subfunction_name" "$module_name"
 
-                validate_subfunction_name \
-                  "$subfunction_path" \
-                  "$function_name" \
-                  "$subfunction_name"
-
-                local item_count=0
-                local item_path
-                local item_name
-
-                while IFS= read -r item_path; do
-                  [[ -z "$item_path" ]] && continue
-
-                  item_count=$((item_count + 1))
-                  checked_items=$((checked_items + 1))
-
-                  item_name="$(basename "$item_path")"
-
-                  echo "    Item: $item_name"
-
-                  validate_item_name \
-                    "$item_path" \
-                    "$subfunction_name" \
-                    "$item_name"
-
-                  local package_count=0
-                  local package_path
-                  local package_name
-
+                  local package_count=0 package_path package_name
                   while IFS= read -r package_path; do
                     [[ -z "$package_path" ]] && continue
-
-                    package_count=$((package_count + 1))
-                    checked_packages=$((checked_packages + 1))
-
+                    package_count=$((package_count + 1)); checked_packages=$((checked_packages + 1))
                     package_name="$(basename "$package_path")"
-
-                    echo "      Package: $package_name"
-
-                    validate_package_name \
-                      "$package_path" \
-                      "$area_name" \
-                      "$item_name" \
-                      "$package_name"
-
-                  done < <(
-                    find "$item_path" \
-                      -mindepth 1 \
-                      -maxdepth 1 \
-                      -type d \
-                      | sort
-                  )
+                    validate_package_name "$package_path" "$area_name" "$module_name" "$package_name"
+                  done < <(find "$module_path" -mindepth 1 -maxdepth 1 -type d | sort)
 
                   if [[ "$package_count" -eq 0 ]]; then
-                    report_error \
-                      "$item_path" \
-                      "Item '$item_name' does not contain any package folders."
+                    report_error "$module_path" "Module '$module_name' does not contain any package folder."
+                  elif [[ "$area_name" == "MOD_HEMS" && "$package_count" -ne 1 ]]; then
+                    report_error "$module_path" "MOD_HEMS module '$module_name' must contain exactly one package folder."
                   fi
-
-                done < <(
-                  find "$subfunction_path" \
-                    -mindepth 1 \
-                    -maxdepth 1 \
-                    -type d \
-                    | sort
-                )
-
-                if [[ "$item_count" -eq 0 ]]; then
-                  report_error \
-                    "$subfunction_path" \
-                    "Sub-function '$subfunction_name' does not contain any item folders."
-                fi
-
-              done < <(
-                find "$function_path" \
-                  -mindepth 1 \
-                  -maxdepth 1 \
-                  -type d \
-                  | sort
-              )
-
-              if [[ "$subfunction_count" -eq 0 ]]; then
-                report_error \
-                  "$function_path" \
-                  "Function '$function_name' does not contain any sub-function folders."
-              fi
-
-            done < <(
-              find "$area_path" \
-                -mindepth 1 \
-                -maxdepth 1 \
-                -type d \
-                | sort
-            )
-
-            if [[ "$function_count" -eq 0 ]]; then
-              report_error \
-                "$area_path" \
-                "Area '$area_name' does not contain any function folders."
-            fi
+                done < <(find "$subfunction_path" -mindepth 1 -maxdepth 1 -type d | sort)
+                [[ "$module_count" -eq 0 ]] && report_error "$subfunction_path" "Sub-function '$subfunction_name' does not contain any module folders."
+              done < <(find "$function_path" -mindepth 1 -maxdepth 1 -type d | sort)
+              [[ "$subfunction_count" -eq 0 ]] && report_error "$function_path" "Function '$function_name' does not contain any sub-function folders."
+            done < <(find "$area_path" -mindepth 1 -maxdepth 1 -type d | sort)
+            [[ "$function_count" -eq 0 ]] && report_error "$area_path" "Area '$area_name' does not contain any function folders."
           }
 
-          if [[ ! -d "$HEMS_ROOT" ]]; then
-            echo "::error::HEMS root folder is missing."
-            exit 1
-          fi
-
+          [[ -d "$HEMS_ROOT" ]] || { echo "::error::HEMS root folder is missing."; exit 1; }
           check_top_level_hems_folders
-
-          for area_name in "${CONTROLLED_AREAS[@]}"; do
-            validate_area_structure "$area_name"
-          done
+          for area_name in "${CONTROLLED_AREAS[@]}"; do validate_area_structure "$area_name"; done
 
           echo ""
-          echo "============================================================"
-          echo "Folder naming check summary"
-          echo "============================================================"
           echo "Controlled areas checked: $checked_areas"
           echo "Support areas skipped:    $skipped_support_areas"
           echo "Functions checked:        $checked_functions"
           echo "Sub-functions checked:    $checked_subfunctions"
-          echo "Items checked:            $checked_items"
+          echo "Modules checked:          $checked_modules"
           echo "Packages checked:         $checked_packages"
-          echo ""
 
-          if [[ "$fail" -ne 0 ]]; then
-            echo "Delivery folder naming check failed."
-            exit 1
-          fi
-
+          [[ "$fail" -eq 0 ]] || { echo "Delivery folder naming check failed."; exit 1; }
           echo "Delivery folder naming check passed."

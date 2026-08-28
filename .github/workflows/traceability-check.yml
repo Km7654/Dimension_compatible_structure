@@ -6,7 +6,6 @@ on:
       - main
       - production
       - "release/**"
-
   push:
     branches:
       - main
@@ -14,7 +13,6 @@ on:
       - "release/**"
       - "test/**"
       - "feature/**"
-
   workflow_dispatch:
 
 permissions:
@@ -35,526 +33,184 @@ jobs:
           set -euo pipefail
 
           HEMS_ROOT="HEMS"
+          RELEASE_SUFFIX="RI_16_0(1.0)"
+          ALLOWED_VARIANTS=("adacxxx2xg" "adacxxx4xg" "obmxxxx1xg" "obmxxxx2xg")
 
           fail=0
-          checked_items=0
-          checked_item_manifests=0
+          checked_modules=0
+          checked_module_manifests=0
           checked_component_manifests=0
           checked_trace_files=0
           checked_manifest_entries=0
 
-          echo "============================================================"
-          echo "HEMS manifest and traceability check"
-          echo "============================================================"
-          echo ""
-          echo "Expected item structure:"
-          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Item>/"
-          echo ""
-          echo "Expected package structure:"
-          echo "HEMS/<AREA>/<Function>/<Sub-function>/<Item>/<PackageFolder>/"
-          echo ""
-
           report_error() {
-            local path="$1"
-            local message="$2"
-
+            local path="$1" message="$2"
             echo "::error file=$path::$message"
             fail=1
           }
 
           trim_value() {
             local value="$1"
-
             value="${value#"${value%%[![:space:]]*}"}"
             value="${value%"${value##*[![:space:]]}"}"
-
             printf "%s" "$value"
           }
 
           remove_optional_quotes() {
             local value="$1"
-
-            if [[ "$value" == \"*\" && "$value" == *\" ]]; then
-              value="${value#\"}"
-              value="${value%\"}"
-            elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
-              value="${value#\'}"
-              value="${value%\'}"
-            fi
-
+            if [[ "$value" == \"*\" && "$value" == *\" ]]; then value="${value#\"}"; value="${value%\"}"
+            elif [[ "$value" == \'*\' && "$value" == *\' ]]; then value="${value#\'}"; value="${value%\'}"; fi
             printf "%s" "$value"
           }
 
           get_manifest_value() {
-            local manifest="$1"
-            local field="$2"
-
-            awk -v field="$field" '
-              $0 ~ ("^" field ":[[:space:]]*") {
-                line = $0
-                sub("^" field ":[[:space:]]*", "", line)
-                print line
-                exit
-              }
-            ' "$manifest"
+            local manifest="$1" field="$2"
+            awk -v field="$field" '$0 ~ ("^" field ":[[:space:]]*") { line=$0; sub("^" field ":[[:space:]]*", "", line); print line; exit }' "$manifest"
           }
 
           check_manifest_field_exists() {
-            local manifest="$1"
-            local field="$2"
-
-            if ! grep -qE "^${field}:[[:space:]]*" "$manifest"; then
-              report_error \
-                "$manifest" \
-                "Missing required manifest field: $field"
-
-              return 1
-            fi
-
-            return 0
+            local manifest="$1" field="$2"
+            grep -qE "^${field}:[[:space:]]*" "$manifest" || { report_error "$manifest" "Missing required manifest field: $field"; return 1; }
           }
 
           check_manifest_field_value() {
-            local manifest="$1"
-            local field="$2"
-            local expected_value="$3"
-
-            if ! check_manifest_field_exists "$manifest" "$field"; then
-              return
-            fi
-
-            local actual_value
-
-            actual_value="$(get_manifest_value "$manifest" "$field")"
-            actual_value="$(trim_value "$actual_value")"
-            actual_value="$(remove_optional_quotes "$actual_value")"
-
-            if [[ "$actual_value" != "$expected_value" ]]; then
-              report_error \
-                "$manifest" \
-                "Manifest field '$field' must be '$expected_value', but found '$actual_value'."
-            fi
+            local manifest="$1" field="$2" expected="$3" actual
+            check_manifest_field_exists "$manifest" "$field" || return
+            actual="$(remove_optional_quotes "$(trim_value "$(get_manifest_value "$manifest" "$field")")")"
+            [[ "$actual" == "$expected" ]] || report_error "$manifest" "Manifest field '$field' must be '$expected', but found '$actual'."
           }
 
           check_manifest_field_not_empty() {
-            local manifest="$1"
-            local field="$2"
-
-            if ! check_manifest_field_exists "$manifest" "$field"; then
-              return
-            fi
-
-            local actual_value
-
-            actual_value="$(get_manifest_value "$manifest" "$field")"
-            actual_value="$(trim_value "$actual_value")"
-            actual_value="$(remove_optional_quotes "$actual_value")"
-
-            if [[ -z "$actual_value" ]]; then
-              report_error \
-                "$manifest" \
-                "Manifest field '$field' must not be empty."
-            fi
-          }
-
-          check_files_section_exists() {
-            local manifest="$1"
-
-            if ! grep -qE "^files:[[:space:]]*$" "$manifest"; then
-              report_error \
-                "$manifest" \
-                "Manifest must contain a top-level files section."
-
-              return 1
-            fi
-
-            return 0
+            local manifest="$1" field="$2" actual
+            check_manifest_field_exists "$manifest" "$field" || return
+            actual="$(remove_optional_quotes "$(trim_value "$(get_manifest_value "$manifest" "$field")")")"
+            [[ -n "$actual" ]] || report_error "$manifest" "Manifest field '$field' must not be empty."
           }
 
           check_manifest_file_entries_exist() {
-            local manifest="$1"
-            local base_directory="$2"
-            local manifest_description="$3"
+            local manifest="$1" base_directory="$2" description="$3"
+            grep -qE '^files:[[:space:]]*$' "$manifest" || { report_error "$manifest" "$description must contain a top-level files section."; return; }
 
-            if ! check_files_section_exists "$manifest"; then
-              return
-            fi
-
-            local inside_files_section=0
-            local listed_entry_count=0
-            local line
-            local listed_file
-
+            local inside=0 count=0 line listed_file
             while IFS= read -r line || [[ -n "$line" ]]; do
               line="${line%$'\r'}"
-
-              if [[ "$line" =~ ^files:[[:space:]]*$ ]]; then
-                inside_files_section=1
-                continue
-              fi
-
-              if [[ "$inside_files_section" -eq 1 ]]; then
-                if [[ "$line" =~ ^[^[:space:]][^:]*:[[:space:]]*.*$ ]]; then
-                  break
-                fi
-
+              [[ "$line" =~ ^files:[[:space:]]*$ ]] && { inside=1; continue; }
+              if [[ "$inside" -eq 1 ]]; then
+                [[ "$line" =~ ^[^[:space:]][^:]*:[[:space:]]*.*$ ]] && break
                 if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+(.+)$ ]]; then
-                  listed_file="${BASH_REMATCH[1]}"
-
-                  listed_file="${listed_file%%#*}"
-                  listed_file="$(trim_value "$listed_file")"
-                  listed_file="$(remove_optional_quotes "$listed_file")"
-
-                  if [[ -z "$listed_file" ]]; then
-                    continue
-                  fi
-
-                  listed_entry_count=$((listed_entry_count + 1))
-                  checked_manifest_entries=$((checked_manifest_entries + 1))
-
-                  if [[ "$listed_file" == /* ]]; then
-                    report_error \
-                      "$manifest" \
-                      "$manifest_description contains an absolute file path. Only relative paths are allowed: $listed_file"
-
-                    continue
-                  fi
-
-                  if [[ "$listed_file" == "../"* ]] || \
-                     [[ "$listed_file" == *"/../"* ]] || \
-                     [[ "$listed_file" == *"/.." ]]; then
-                    report_error \
-                      "$manifest" \
-                      "$manifest_description contains a path outside its directory: $listed_file"
-
-                    continue
-                  fi
-
-                  if [[ ! -f "$base_directory/$listed_file" ]]; then
-                    report_error \
-                      "$manifest" \
-                      "$manifest_description lists a missing file: $listed_file"
-                  fi
+                  listed_file="${BASH_REMATCH[1]}"; listed_file="${listed_file%%#*}"
+                  listed_file="$(remove_optional_quotes "$(trim_value "$listed_file")")"
+                  [[ -z "$listed_file" ]] && continue
+                  count=$((count + 1)); checked_manifest_entries=$((checked_manifest_entries + 1))
+                  [[ "$listed_file" != /* ]] || { report_error "$manifest" "$description contains an absolute path: $listed_file"; continue; }
+                  [[ "$listed_file" != "../"* && "$listed_file" != *"/../"* && "$listed_file" != *"/.." ]] || { report_error "$manifest" "$description contains a path outside its directory: $listed_file"; continue; }
+                  [[ -f "$base_directory/$listed_file" ]] || report_error "$manifest" "$description lists a missing file: $listed_file"
                 fi
               fi
             done < "$manifest"
+            [[ "$count" -gt 0 ]] || report_error "$manifest" "$description files section must contain at least one entry."
+          }
 
-            if [[ "$listed_entry_count" -eq 0 ]]; then
-              report_error \
-                "$manifest" \
-                "$manifest_description files section must contain at least one file entry."
-            fi
+          validate_package_name() {
+            local path="$1" area="$2" module_name="$3" package="$4"
+            local variant
+            case "$area" in
+              MOD_HEMS)
+                [[ "$package" == "a_${module_name}_T_A" ]] || report_error "$path" "Invalid MOD_HEMS package '$package'."
+                ;;
+              SPEC_HEMS)
+                for variant in "${ALLOWED_VARIANTS[@]}"; do [[ "$package" == "a_${module_name}_${variant}_A" ]] && return 0; done
+                report_error "$path" "Invalid SPEC_HEMS package '$package'."
+                ;;
+              CODE_HEMS)
+                for variant in "${ALLOWED_VARIANTS[@]}"; do [[ "$package" == "a_${module_name}_${variant}_A_${RELEASE_SUFFIX}" ]] && return 0; done
+                report_error "$path" "Invalid CODE_HEMS package '$package'."
+                ;;
+            esac
           }
 
           check_trace_file() {
-            local item_directory="$1"
-            local area="$2"
-            local function_name="$3"
-            local sub_function_name="$4"
-            local item_name="$5"
-
-            local trace_file="${item_directory}/trace_links.csv"
-
-            if [[ ! -f "$trace_file" ]]; then
-              report_error \
-                "$item_directory" \
-                "Item folder must contain trace_links.csv directly under the item folder."
-
-              return
-            fi
-
+            local module_directory="$1" area="$2" function_name="$3" subfunction_name="$4" module_name="$5"
+            local trace_file="${module_directory}/trace_links.csv"
+            [[ -f "$trace_file" ]] || { report_error "$module_directory" "Module folder must contain trace_links.csv directly under the module folder."; return; }
             checked_trace_files=$((checked_trace_files + 1))
-
-            local trace_header
-
-            trace_header="$(head -n 1 "$trace_file" | tr -d '\r')"
-
-            if [[ "$trace_header" != "source,target" ]]; then
-              report_error \
-                "$trace_file" \
-                "Traceability file must start with the exact header 'source,target'."
-            fi
-
-            local expected_trace_line
-
-            expected_trace_line="CB_REQ_${item_name},${area}/${function_name}/${sub_function_name}/${item_name}"
-
-            if ! tr -d '\r' < "$trace_file" | grep -Fqx -- "$expected_trace_line"; then
-              report_error \
-                "$trace_file" \
-                "Expected traceability mapping is missing. Expected: $expected_trace_line"
-            fi
+            [[ "$(head -n 1 "$trace_file" | tr -d '\r')" == "source,target" ]] || report_error "$trace_file" "Traceability file must start with the exact header 'source,target'."
+            local expected="CB_REQ_${module_name},${area}/${function_name}/${subfunction_name}/${module_name}"
+            tr -d '\r' < "$trace_file" | grep -Fqx -- "$expected" || report_error "$trace_file" "Expected traceability mapping is missing: $expected"
           }
 
-          validate_item_manifest() {
-            local manifest="$1"
-            local expected_area="$2"
-            local expected_type="$3"
-            local expected_function="$4"
-            local expected_sub_function="$5"
-            local expected_item="$6"
-
-            echo "  Checking item manifest: $manifest"
-
-            checked_item_manifests=$((checked_item_manifests + 1))
-
-            check_manifest_field_value \
-              "$manifest" \
-              "module" \
-              "$expected_item"
-
-            check_manifest_field_value \
-              "$manifest" \
-              "type" \
-              "$expected_type"
-
-            check_manifest_field_value \
-              "$manifest" \
-              "area" \
-              "$expected_area"
-
-            check_manifest_field_value \
-              "$manifest" \
-              "function" \
-              "$expected_function"
-
-            check_manifest_field_value \
-              "$manifest" \
-              "sub_function" \
-              "$expected_sub_function"
-
-            check_manifest_field_not_empty \
-              "$manifest" \
-              "version"
-
-            check_manifest_field_not_empty \
-              "$manifest" \
-              "delivery_cycle"
-
-            check_manifest_field_not_empty \
-              "$manifest" \
-              "commit"
-
-            check_manifest_file_entries_exist \
-              "$manifest" \
-              "$(dirname "$manifest")" \
-              "Item manifest"
+          validate_module_manifest() {
+            local manifest="$1" area="$2" type="$3" function_name="$4" subfunction_name="$5" module_name="$6"
+            checked_module_manifests=$((checked_module_manifests + 1))
+            check_manifest_field_value "$manifest" "module" "$module_name"
+            check_manifest_field_value "$manifest" "type" "$type"
+            check_manifest_field_value "$manifest" "area" "$area"
+            check_manifest_field_value "$manifest" "function" "$function_name"
+            check_manifest_field_value "$manifest" "sub_function" "$subfunction_name"
+            check_manifest_field_not_empty "$manifest" "version"
+            check_manifest_field_not_empty "$manifest" "delivery_cycle"
+            check_manifest_field_not_empty "$manifest" "commit"
+            check_manifest_file_entries_exist "$manifest" "$(dirname "$manifest")" "Module manifest"
           }
 
           validate_component_manifest() {
-            local component_manifest="$1"
-            local package_folder="$2"
-            local expected_component_type="$3"
-            local expected_item="$4"
-
-            echo "    Checking component manifest: $component_manifest"
-
+            local manifest="$1" package="$2" component_type="$3" module_name="$4"
             checked_component_manifests=$((checked_component_manifests + 1))
-
-            check_manifest_field_value \
-              "$component_manifest" \
-              "component" \
-              "$package_folder"
-
-            check_manifest_field_value \
-              "$component_manifest" \
-              "type" \
-              "$expected_component_type"
-
-            check_manifest_field_value \
-              "$component_manifest" \
-              "parent_item" \
-              "$expected_item"
-
-            check_manifest_file_entries_exist \
-              "$component_manifest" \
-              "$(dirname "$component_manifest")" \
-              "Component manifest"
+            check_manifest_field_value "$manifest" "component" "$package"
+            check_manifest_field_value "$manifest" "type" "$component_type"
+            check_manifest_field_value "$manifest" "parent_item" "$module_name"
+            check_manifest_file_entries_exist "$manifest" "$(dirname "$manifest")" "Component manifest"
           }
 
-          validate_package_folders() {
-            local item_directory="$1"
-            local expected_component_type="$2"
-            local expected_item="$3"
-
-            local package_count=0
-            local package_directory
-            local package_folder
-            local component_manifest
-
+          validate_packages() {
+            local module_directory="$1" area="$2" component_type="$3" module_name="$4"
+            local count=0 package_directory package component_manifest
             while IFS= read -r package_directory; do
               [[ -z "$package_directory" ]] && continue
-
-              package_count=$((package_count + 1))
-
-              package_folder="$(basename "$package_directory")"
+              count=$((count + 1)); package="$(basename "$package_directory")"
+              validate_package_name "$package_directory" "$area" "$module_name" "$package"
               component_manifest="${package_directory}/component-manifest.yaml"
-
-              echo "  Checking package: $package_folder"
-
-              if [[ ! -f "$component_manifest" ]]; then
-                report_error \
-                  "$package_directory" \
-                  "Generated package folder must contain component-manifest.yaml."
-
-                continue
+              if [[ -f "$component_manifest" ]]; then
+                validate_component_manifest "$component_manifest" "$package" "$component_type" "$module_name"
+              else
+                report_error "$package_directory" "Package folder must contain component-manifest.yaml."
               fi
-
-              validate_component_manifest \
-                "$component_manifest" \
-                "$package_folder" \
-                "$expected_component_type" \
-                "$expected_item"
-
-            done < <(
-              find "$item_directory" \
-                -mindepth 1 \
-                -maxdepth 1 \
-                -type d \
-                | sort
-            )
-
-            if [[ "$package_count" -eq 0 ]]; then
-              report_error \
-                "$item_directory" \
-                "Item folder must contain at least one generated package folder."
-            fi
+            done < <(find "$module_directory" -mindepth 1 -maxdepth 1 -type d | sort)
+            [[ "$count" -gt 0 ]] || report_error "$module_directory" "Module folder must contain at least one package folder."
+            [[ "$area" != "MOD_HEMS" || "$count" -eq 1 ]] || report_error "$module_directory" "MOD_HEMS module must contain exactly one package folder."
           }
 
           validate_area() {
-            local area="$1"
-            local manifest_name="$2"
-            local manifest_type="$3"
-            local component_type="$4"
+            local area="$1" manifest_name="$2" manifest_type="$3" component_type="$4"
+            local area_root="${HEMS_ROOT}/${area}" count=0
+            [[ -d "$area_root" ]] || { report_error "$area_root" "Required HEMS area folder is missing."; return; }
 
-            local area_root="${HEMS_ROOT}/${area}"
-            local area_item_count=0
+            local module_directory relative function_name subfunction_name module_name manifest
+            while IFS= read -r module_directory; do
+              [[ -z "$module_directory" ]] && continue
+              count=$((count + 1)); checked_modules=$((checked_modules + 1))
+              relative="${module_directory#${area_root}/}"
+              IFS="/" read -r function_name subfunction_name module_name <<< "$relative"
+              manifest="${module_directory}/${manifest_name}"
 
-            echo ""
-            echo "============================================================"
-            echo "Checking $area manifests and traceability"
-            echo "============================================================"
-
-            if [[ ! -d "$area_root" ]]; then
-              report_error \
-                "$area_root" \
-                "Required HEMS area folder is missing."
-
-              return
-            fi
-
-            local item_directory
-            local relative_item_path
-            local function_name
-            local sub_function_name
-            local item_name
-            local item_manifest
-
-            while IFS= read -r item_directory; do
-              [[ -z "$item_directory" ]] && continue
-
-              area_item_count=$((area_item_count + 1))
-              checked_items=$((checked_items + 1))
-
-              relative_item_path="${item_directory#${area_root}/}"
-
-              IFS="/" read -r \
-                function_name \
-                sub_function_name \
-                item_name \
-                <<< "$relative_item_path"
-
-              item_manifest="${item_directory}/${manifest_name}"
-
-              echo ""
-              echo "Checking item:"
-              echo "  Area:         $area"
-              echo "  Function:     $function_name"
-              echo "  Sub-function: $sub_function_name"
-              echo "  Item:         $item_name"
-              echo "  Path:         $item_directory"
-
-              if [[ ! -f "$item_manifest" ]]; then
-                report_error \
-                  "$item_directory" \
-                  "Item folder must contain $manifest_name directly under the item folder."
-              else
-                validate_item_manifest \
-                  "$item_manifest" \
-                  "$area" \
-                  "$manifest_type" \
-                  "$function_name" \
-                  "$sub_function_name" \
-                  "$item_name"
-              fi
-
-              check_trace_file \
-                "$item_directory" \
-                "$area" \
-                "$function_name" \
-                "$sub_function_name" \
-                "$item_name"
-
-              validate_package_folders \
-                "$item_directory" \
-                "$component_type" \
-                "$item_name"
-
-            done < <(
-              find "$area_root" \
-                -mindepth 3 \
-                -maxdepth 3 \
-                -type d \
-                | sort
-            )
-
-            if [[ "$area_item_count" -eq 0 ]]; then
-              report_error \
-                "$area_root" \
-                "No item folders were found. Expected: $area_root/<Function>/<Sub-function>/<Item>"
-            fi
-
-            echo ""
-            echo "$area items checked: $area_item_count"
+              echo "Checking module: $area/$function_name/$subfunction_name/$module_name"
+              [[ -f "$manifest" ]] && validate_module_manifest "$manifest" "$area" "$manifest_type" "$function_name" "$subfunction_name" "$module_name" || report_error "$module_directory" "Module folder must contain $manifest_name directly under the module folder."
+              check_trace_file "$module_directory" "$area" "$function_name" "$subfunction_name" "$module_name"
+              validate_packages "$module_directory" "$area" "$component_type" "$module_name"
+            done < <(find "$area_root" -mindepth 3 -maxdepth 3 -type d | sort)
+            [[ "$count" -gt 0 ]] || report_error "$area_root" "No module folders found. Expected $area_root/<Function>/<Sub-function>/<Module>."
           }
 
-          if [[ ! -d "$HEMS_ROOT" ]]; then
-            echo "::error::HEMS root folder is missing."
-            exit 1
-          fi
+          [[ -d "$HEMS_ROOT" ]] || { echo "::error::HEMS root folder is missing."; exit 1; }
+          validate_area "CODE_HEMS" "code-manifest.yaml" "code" "generated_code_package"
+          validate_area "MOD_HEMS" "module-manifest.yaml" "module" "model_package"
+          validate_area "SPEC_HEMS" "spec-manifest.yaml" "specification" "specification_package"
 
-          validate_area \
-            "CODE_HEMS" \
-            "code-manifest.yaml" \
-            "code" \
-            "generated_code_package"
-
-          validate_area \
-            "MOD_HEMS" \
-            "module-manifest.yaml" \
-            "module" \
-            "model_package"
-
-          validate_area \
-            "SPEC_HEMS" \
-            "spec-manifest.yaml" \
-            "specification" \
-            "specification_package"
-
-          echo ""
-          echo "============================================================"
-          echo "Traceability check summary"
-          echo "============================================================"
-          echo "Items checked:               $checked_items"
-          echo "Item manifests checked:      $checked_item_manifests"
+          echo "Modules checked:             $checked_modules"
+          echo "Module manifests checked:    $checked_module_manifests"
           echo "Component manifests checked: $checked_component_manifests"
           echo "Trace files checked:         $checked_trace_files"
           echo "Manifest entries checked:    $checked_manifest_entries"
-          echo ""
 
-          if [[ "$fail" -ne 0 ]]; then
-            echo "Traceability check failed."
-            exit 1
-          fi
-
+          [[ "$fail" -eq 0 ]] || { echo "Traceability check failed."; exit 1; }
           echo "Traceability check passed."
