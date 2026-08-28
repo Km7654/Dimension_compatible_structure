@@ -3,11 +3,11 @@ type: module
 area: MOD_HEMS
 function: FLPC
 sub_function: FLPC_MWOU
-version: 2
+version: 3
 delivery_cycle: not_released
-commit: ffa441d7ed79df5b455dd31a48c4b53b07fda4f3
+commit: 20d4c46fef30a570405c003e3e1034739f2c8772
 generated_by: GitHub Actions
-generated_on: 2026-08-28T11:07:05Z
+generated_on: 2026-08-28T11:29:24Z
 structure_type: nested_generated_packages
 files:
   - a_FLPC_MWOU_CTL_T_A/FLPC_MWOU_CTL_Module_Interface.xlsx
@@ -16,11 +16,11 @@ files:
   - a_FLPC_MWOU_CTL_T_A/a_FLPC_MWOU_CTL_T_A_Variant.xlsx
 
 item_version:
-  version: 2
-  tag: item/MOD_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/v2
-  sha: ffa441d7ed79df5b455dd31a48c4b53b07fda4f3
-  pr: 22
-  updated_utc: "2026-08-28T11:07:05Z"
+  version: 3
+  tag: item/MOD_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/v3
+  sha: 20d4c46fef30a570405c003e3e1034739f2c8772
+  pr: 25
+  updated_utc: "2026-08-28T11:29:24Z"
 
 item_version_history:
   - version: 1
@@ -33,3 +33,8 @@ item_version_history:
     sha: ffa441d7ed79df5b455dd31a48c4b53b07fda4f3
     pr: 22
     updated_utc: "2026-08-28T11:07:05Z"
+  - version: 3
+    tag: item/MOD_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/v3
+    sha: 20d4c46fef30a570405c003e3e1034739f2c8772
+    pr: 25
+    updated_utc: "2026-08-28T11:29:24Z"
