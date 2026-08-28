@@ -1,7 +1,0 @@
-component: a_ASXX_DGNX_CSM_adacxxx4xg_A_RI_16_0(1.0)
-type: generated_code_package
-parent_item: ASXX_DGNX_CSM
-files:
-  - ASXX_DGNX_CSM_adacxxx4xg.c
-  - ASXX_DGNX_CSM_adacxxx4xg.h
-  - ASXX_DGNX_CSM_adacxxx4xg_Memmap.h

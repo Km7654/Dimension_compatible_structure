@@ -1,125 +1,862 @@
 #!/usr/bin/env bash
-
 set -euo pipefail
 
-FUNCTION="ATXX"
-SUB_FUNCTION="ATXX_DIAG"
-MODULE="ATXX_DIAG_CTL"
+# ============================================================
+# Create realistic nested HEMS sample structure
+#
+# Common hierarchy:
+#
+# HEMS/<AREA>/<Function>/<Sub-function>/<Module>/<Package>/<Files>
+#
+# Areas:
+#   CODE_HEMS
+#   MOD_HEMS
+#   SPEC_HEMS
+#
+# CODE package format:
+#   a_<Module>_<CodeItem>_A_RI_<Release>(<Version>)
+#
+# MOD package formats:
+#   a_<Module>_T_A
+#   a_<Module>_<ModelItem>_A
+#
+# SPEC package format:
+#   b_<Module>_<SpecificationItem>_<A-or-B>
+#
+# This script creates placeholder sample files only.
+# Replace placeholder artifacts with real delivery files.
+# ============================================================
 
-VERSION="v1.0.0"
-DELIVERY_CYCLE="MD31_01"
 
-CODE_DIR="HEMS/CODE_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
-MOD_DIR="HEMS/MOD_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
-SPEC_DIR="HEMS/SPEC_HEMS/$FUNCTION/$SUB_FUNCTION/$MODULE"
+# ------------------------------------------------------------
+# REPOSITORY CONFIGURATION
+# ------------------------------------------------------------
 
-echo "Fixing manifests and traceability files..."
+REPO_ROOT="$(pwd)"
+HEMS_ROOT="${REPO_ROOT}/HEMS"
 
-############################################
-# CODE_HEMS
-############################################
+CODE_ROOT="${HEMS_ROOT}/CODE_HEMS"
+MOD_ROOT="${HEMS_ROOT}/MOD_HEMS"
+SPEC_ROOT="${HEMS_ROOT}/SPEC_HEMS"
 
-cat > "$CODE_DIR/trace_links.csv" << EOF
-source,target,link_type
-${MODULE}.c,${MODULE}.h,includes
-${MODULE}.c,${MODULE}_static_analysis_report.txt,validated_by
-${MODULE}.c,${MODULE}_sil_results.txt,tested_by
-EOF
+BASELINES_ROOT="${HEMS_ROOT}/BASELINES"
 
-cat > "$CODE_DIR/code-manifest.yaml" << EOF
-module: $MODULE
-type: code
-area: CODE_HEMS
-function: $FUNCTION
-sub_function: $SUB_FUNCTION
-version: $VERSION
-delivery_cycle: $DELIVERY_CYCLE
+GENERATED_BY="create.sh"
 
-files:
-  - ${MODULE}.c
-  - ${MODULE}.h
-  - ${MODULE}_compiler_log.txt
-  - ${MODULE}_static_analysis_report.txt
-  - ${MODULE}_sil_results.txt
-  - ${MODULE}_certification_report.txt
-  - trace_links.csv
-EOF
 
-############################################
-# MOD_HEMS
-############################################
+# ------------------------------------------------------------
+# SAMPLE CODE AND MODEL ITEMS
+# ------------------------------------------------------------
 
-cat > "$MOD_DIR/trace_links.csv" << EOF
-source,target,link_type
-${MODULE}.slx,${MODULE}_dictionary.sldd,uses
-${MODULE}.slx,${MODULE}_analysis_report.txt,validated_by
-${MODULE}.slx,${MODULE}_east_report.pdf,reviewed_by
-${MODULE}.slx,${MODULE}_mdt_reference.txt,linked_to_mdt
-${MODULE}.slx,${MODULE}_sof_reference.txt,linked_to_sof
-EOF
+# Three example code/model items are created under every module.
+CODE_MODEL_ITEMS=(
+  "adacxxx2xg"
+  "adacxxx4xg"
+  "obmxxxx1xg"
+)
 
-cat > "$MOD_DIR/module-manifest.yaml" << EOF
-module: $MODULE
-type: module
-area: MOD_HEMS
-function: $FUNCTION
-sub_function: $SUB_FUNCTION
-version: $VERSION
-delivery_cycle: $DELIVERY_CYCLE
+# CODE release and version values.
+#
+# These values are examples based on the real package format:
+# a_<Module>_<CodeItem>_A_RI_16_0(1.0)
+CODE_RELEASES=(
+  "16_0"
+  "16_0"
+  "16_0"
+)
 
-files:
-  - ${MODULE}.slx
-  - ${MODULE}_dictionary.sldd
-  - ${MODULE}_interface.xlsx
-  - ${MODULE}_variant.xlsx
-  - ${MODULE}_stimuli.mat
-  - ${MODULE}_calibration.html
-  - ${MODULE}_analysis_report.txt
-  - ${MODULE}_east_report.pdf
-  - ${MODULE}_delivery_package.zip
-  - ${MODULE}_sof_reference.txt
-  - ${MODULE}_mdt_reference.txt
-  - trace_links.csv
-EOF
+CODE_VERSIONS=(
+  "1.0"
+  "1.0"
+  "1.0"
+)
 
-############################################
-# SPEC_HEMS
-############################################
 
-cat > "$SPEC_DIR/trace_links.csv" << EOF
-source,target,link_type
-${MODULE}_spec_source.xml,${MODULE}_spec_document.pdf,documented_by
-${MODULE}_crs_interface.xml,${MODULE}_spec_source.xml,defines
-${MODULE}_technical_fact_reference.txt,${MODULE}_sdt_reference.txt,linked_to_sdt
-EOF
+# ------------------------------------------------------------
+# SAMPLE SPECIFICATION ITEMS
+# ------------------------------------------------------------
 
-cat > "$SPEC_DIR/spec-manifest.yaml" << EOF
-module: $MODULE
-type: specification
-area: SPEC_HEMS
-function: $FUNCTION
-sub_function: $SUB_FUNCTION
-version: $VERSION
-delivery_cycle: $DELIVERY_CYCLE
+# Three example specification items per module.
+SPEC_ITEMS=(
+  "fuelevprs"
+  "fuelhtrwd"
+  "fuellowprs"
+)
 
-files:
-  - ${MODULE}_spec_source.xml
-  - ${MODULE}_spec_document.pdf
-  - ${MODULE}_comparison_report.txt
-  - ${MODULE}_history_log.txt
-  - ${MODULE}_crs_interface.xml
-  - ${MODULE}_sdt_reference.txt
-  - ${MODULE}_technical_fact_reference.txt
-  - trace_links.csv
-EOF
+SPEC_SUFFIXES=(
+  "B"
+  "A"
+  "A"
+)
+
+SPEC_VERSIONS=(
+  "2-0"
+  "1-0"
+  "3-0"
+)
+
+
+# ------------------------------------------------------------
+# HELPER FUNCTIONS
+# ------------------------------------------------------------
+
+make_dir() {
+  local directory_path="$1"
+
+  mkdir -p "$directory_path"
+}
+
+
+write_file() {
+  local file_path="$1"
+  local content="$2"
+
+  mkdir -p "$(dirname "$file_path")"
+  printf "%s\n" "$content" > "$file_path"
+}
+
+
+append_file() {
+  local file_path="$1"
+  local content="$2"
+
+  mkdir -p "$(dirname "$file_path")"
+  printf "%s\n" "$content" >> "$file_path"
+}
+
+
+create_placeholder_file() {
+  local file_path="$1"
+  local artifact_type="$2"
+  local module_name="$3"
+  local package_name="$4"
+
+  mkdir -p "$(dirname "$file_path")"
+
+  {
+    echo "PLACEHOLDER SAMPLE FILE"
+    echo "File: $(basename "$file_path")"
+    echo "Artifact type: $artifact_type"
+    echo "Module: $module_name"
+    echo "Package: $package_name"
+    echo "Generated by: $GENERATED_BY"
+    echo ""
+    echo "Replace this placeholder with the real engineering artifact."
+  } > "$file_path"
+}
+
+
+escape_for_c_identifier() {
+  local input_value="$1"
+
+  printf "%s" "$input_value" | sed 's/[^A-Za-z0-9_]/_/g'
+}
+
+
+write_manifest_file_entry() {
+  local manifest_path="$1"
+  local relative_file_path="$2"
+
+  append_file "$manifest_path" "  - $relative_file_path"
+}
+
+
+# ------------------------------------------------------------
+# FUNCTION, SUB-FUNCTION, AND MODULE DEFINITIONS
+# ------------------------------------------------------------
+
+subfunctions_for_function() {
+  local function_name="$1"
+
+  case "$function_name" in
+    FLPC)
+      echo "FLPC_MWIN FLPC_MWOU FLPC_DGNX"
+      ;;
+
+    ASXX)
+      echo "ASXX_ADMX ASXX_DGNX ASXX_MAIN"
+      ;;
+
+    ATXX)
+      echo "ATXX_CTRL ATXX_DIAG ATXX_MAIN"
+      ;;
+
+    *)
+      echo "${function_name}_MAIN ${function_name}_CTRL ${function_name}_DIAG"
+      ;;
+  esac
+}
+
+
+modules_for_subfunction() {
+  local subfunction_name="$1"
+
+  case "$subfunction_name" in
+    FLPC_MWIN)
+      echo "FLPC_MWIN_SEN FLPC_MWIN_CTL FLPC_MWIN_MON"
+      ;;
+
+    FLPC_MWOU)
+      echo "FLPC_MWOU_CSM FLPC_MWOU_CTL FLPC_MWOU_MON"
+      ;;
+
+    FLPC_DGNX)
+      echo "FLPC_DGNX_CSM FLPC_DGNX_CTL FLPC_DGNX_MON"
+      ;;
+
+    ASXX_ADMX)
+      echo "ASXX_ADMX_CSM ASXX_ADMX_CTL ASXX_ADMX_MON"
+      ;;
+
+    ASXX_DGNX)
+      echo "ASXX_DGNX_COL ASXX_DGNX_FLW ASXX_DGNX_MED"
+      ;;
+
+    ASXX_MAIN)
+      echo "ASXX_MAIN_CSM ASXX_MAIN_CTL ASXX_MAIN_MON"
+      ;;
+
+    ATXX_CTRL)
+      echo "ATXX_CTRL_CSM ATXX_CTRL_CTL ATXX_CTRL_MON"
+      ;;
+
+    ATXX_DIAG)
+      echo "ATXX_DIAG_CSM ATXX_DIAG_CTL ATXX_DIAG_MON"
+      ;;
+
+    ATXX_MAIN)
+      echo "ATXX_MAIN_CSM ATXX_MAIN_CTL ATXX_MAIN_MON"
+      ;;
+
+    *)
+      echo "${subfunction_name}_CSM ${subfunction_name}_CTL ${subfunction_name}_MON"
+      ;;
+  esac
+}
+
+
+# ------------------------------------------------------------
+# TRACEABILITY FILE
+# ------------------------------------------------------------
+
+create_trace_links() {
+  local trace_file="$1"
+  local area="$2"
+  local function_name="$3"
+  local subfunction_name="$4"
+  local module_name="$5"
+
+  write_file "$trace_file" "source,target"
+
+  append_file \
+    "$trace_file" \
+    "CB_REQ_${module_name},${area}/${function_name}/${subfunction_name}/${module_name}"
+}
+
+
+# ------------------------------------------------------------
+# ITEM-LEVEL MANIFEST CREATION
+# ------------------------------------------------------------
+
+create_item_manifest() {
+  local manifest_path="$1"
+  local manifest_type="$2"
+  local area="$3"
+  local function_name="$4"
+  local subfunction_name="$5"
+  local module_name="$6"
+
+  write_file "$manifest_path" "module: $module_name"
+  append_file "$manifest_path" "type: $manifest_type"
+  append_file "$manifest_path" "area: $area"
+  append_file "$manifest_path" "function: $function_name"
+  append_file "$manifest_path" "sub_function: $subfunction_name"
+  append_file "$manifest_path" "version: not_released"
+  append_file "$manifest_path" "delivery_cycle: not_released"
+  append_file "$manifest_path" "commit: not_released"
+  append_file "$manifest_path" "generated_by: $GENERATED_BY"
+  append_file "$manifest_path" "generated_on: placeholder"
+  append_file "$manifest_path" "structure_type: nested_delivery_packages"
+  append_file "$manifest_path" "files:"
+}
+
+
+# ------------------------------------------------------------
+# COMPONENT MANIFEST CREATION
+# ------------------------------------------------------------
+
+create_component_manifest_header() {
+  local component_manifest="$1"
+  local package_name="$2"
+  local package_type="$3"
+  local parent_module="$4"
+
+  write_file "$component_manifest" "component: $package_name"
+  append_file "$component_manifest" "type: $package_type"
+  append_file "$component_manifest" "parent_module: $parent_module"
+  append_file "$component_manifest" "parent_item: $parent_module"
+  append_file "$component_manifest" "generated_by: $GENERATED_BY"
+  append_file "$component_manifest" "files:"
+}
+
+
+add_component_file() {
+  local component_manifest="$1"
+  local item_manifest="$2"
+  local package_name="$3"
+  local file_name="$4"
+
+  append_file "$component_manifest" "  - $file_name"
+  write_manifest_file_entry "$item_manifest" "${package_name}/${file_name}"
+}
+
+
+finish_component_manifest() {
+  local item_manifest="$1"
+  local package_name="$2"
+
+  write_manifest_file_entry \
+    "$item_manifest" \
+    "${package_name}/component-manifest.yaml"
+}
+
+
+# ------------------------------------------------------------
+# CODE_HEMS PACKAGE CREATION
+# ------------------------------------------------------------
+
+create_code_package() {
+  local module_directory="$1"
+  local item_manifest="$2"
+  local module_name="$3"
+  local code_item="$4"
+  local release_value="$5"
+  local version_value="$6"
+
+  local package_name
+  local package_directory
+  local component_manifest
+
+  package_name="a_${module_name}_${code_item}_A_RI_${release_value}(${version_value})"
+  package_directory="${module_directory}/${package_name}"
+  component_manifest="${package_directory}/component-manifest.yaml"
+
+  make_dir "$package_directory"
+
+  local c_file="${module_name}_${code_item}.c"
+  local h_file="${module_name}_${code_item}.h"
+  local memmap_file="${module_name}_${code_item}_Memmap.h"
+
+  local c_identifier
+  c_identifier="$(escape_for_c_identifier "${module_name}_${code_item}")"
+
+  write_file \
+    "${package_directory}/${c_file}" \
+    "/* Placeholder generated C source for ${module_name} ${code_item}. */"
+
+  append_file "${package_directory}/${c_file}" ""
+  append_file "${package_directory}/${c_file}" "#include \"${h_file}\""
+  append_file "${package_directory}/${c_file}" ""
+  append_file "${package_directory}/${c_file}" "void ${c_identifier}_step(void)"
+  append_file "${package_directory}/${c_file}" "{"
+  append_file "${package_directory}/${c_file}" "    /* Replace with real generated code. */"
+  append_file "${package_directory}/${c_file}" "}"
+
+  local include_guard
+  include_guard="$(printf "%s_H" "$c_identifier" | tr '[:lower:]' '[:upper:]')"
+
+  write_file \
+    "${package_directory}/${h_file}" \
+    "/* Placeholder generated header for ${module_name} ${code_item}. */"
+
+  append_file "${package_directory}/${h_file}" ""
+  append_file "${package_directory}/${h_file}" "#ifndef ${include_guard}"
+  append_file "${package_directory}/${h_file}" "#define ${include_guard}"
+  append_file "${package_directory}/${h_file}" ""
+  append_file "${package_directory}/${h_file}" "void ${c_identifier}_step(void);"
+  append_file "${package_directory}/${h_file}" ""
+  append_file "${package_directory}/${h_file}" "#endif"
+
+  write_file \
+    "${package_directory}/${memmap_file}" \
+    "/* Placeholder MemMap header for ${module_name} ${code_item}. */"
+
+  create_component_manifest_header \
+    "$component_manifest" \
+    "$package_name" \
+    "generated_code_package" \
+    "$module_name"
+
+  append_file "$component_manifest" "code_item: $code_item"
+  append_file "$component_manifest" "release: $release_value"
+  append_file "$component_manifest" "version: $version_value"
+
+  add_component_file \
+    "$component_manifest" \
+    "$item_manifest" \
+    "$package_name" \
+    "$c_file"
+
+  add_component_file \
+    "$component_manifest" \
+    "$item_manifest" \
+    "$package_name" \
+    "$h_file"
+
+  add_component_file \
+    "$component_manifest" \
+    "$item_manifest" \
+    "$package_name" \
+    "$memmap_file"
+
+  finish_component_manifest "$item_manifest" "$package_name"
+}
+
+
+# ------------------------------------------------------------
+# MOD_HEMS MODULE-LEVEL PACKAGE
+# ------------------------------------------------------------
+
+create_mod_target_package() {
+  local module_directory="$1"
+  local item_manifest="$2"
+  local module_name="$3"
+
+  local package_name="a_${module_name}_T_A"
+  local package_directory="${module_directory}/${package_name}"
+  local component_manifest="${package_directory}/component-manifest.yaml"
+
+  make_dir "$package_directory"
+
+  local model_file="a_${module_name}_T_A.slx"
+  local variant_file="a_${module_name}_T_A_Variant.xlsx"
+  local interface_file="${module_name}_Module_Interface.xlsx"
+  local mxam_file="MXAM_Report_${module_name}_selected_artifacts.xlsx"
+
+  create_placeholder_file \
+    "${package_directory}/${model_file}" \
+    "Module-level Simulink model" \
+    "$module_name" \
+    "$package_name"
+
+  create_placeholder_file \
+    "${package_directory}/${variant_file}" \
+    "Module-level variant configuration" \
+    "$module_name" \
+    "$package_name"
+
+  create_placeholder_file \
+    "${package_directory}/${interface_file}" \
+    "Module interface definition" \
+    "$module_name" \
+    "$package_name"
+
+  create_placeholder_file \
+    "${package_directory}/${mxam_file}" \
+    "MXAM module analysis report" \
+    "$module_name" \
+    "$package_name"
+
+  create_component_manifest_header \
+    "$component_manifest" \
+    "$package_name" \
+    "module_target_package" \
+    "$module_name"
+
+  add_component_file \
+    "$component_manifest" \
+    "$item_manifest" \
+    "$package_name" \
+    "$model_file"
+
+  add_component_file \
+    "$component_manifest" \
+    "$item_manifest" \
+    "$package_name" \
+    "$variant_file"
+
+  add_component_file \
+    "$component_manifest" \
+    "$item_manifest" \
+    "$package_name" \
+    "$interface_file"
+
+  add_component_file \
+    "$component_manifest" \
+    "$item_manifest" \
+    "$package_name" \
+    "$mxam_file"
+
+  finish_component_manifest "$item_manifest" "$package_name"
+}
+
+
+# ------------------------------------------------------------
+# MOD_HEMS VARIANT PACKAGE
+# ------------------------------------------------------------
+
+create_mod_variant_package() {
+  local module_directory="$1"
+  local item_manifest="$2"
+  local module_name="$3"
+  local model_item="$4"
+
+  local package_name="a_${module_name}_${model_item}_A"
+  local package_directory="${module_directory}/${package_name}"
+  local component_manifest="${package_directory}/component-manifest.yaml"
+
+  make_dir "$package_directory"
+
+  local versioned_pdf="${package_name}(10-0).pdf"
+  local model_file="${package_name}.slx"
+  local html_report="${package_name}.html"
+  local data_file="${package_name}_data.c"
+  local dr_report="${package_name}_DR_Report.xlsx"
+  local model_report="ReportMR_${package_name}.pdf"
+  local dictionary_report="ReportMRDICO_${package_name}.xlsx"
+
+  local required_files=(
+    "$versioned_pdf"
+    "$model_file"
+    "$html_report"
+    "$data_file"
+    "$dr_report"
+    "$model_report"
+    "$dictionary_report"
+  )
+
+  local required_file
+
+  for required_file in "${required_files[@]}"; do
+    create_placeholder_file \
+      "${package_directory}/${required_file}" \
+      "MOD variant delivery artifact" \
+      "$module_name" \
+      "$package_name"
+  done
+
+  create_component_manifest_header \
+    "$component_manifest" \
+    "$package_name" \
+    "model_variant_package" \
+    "$module_name"
+
+  append_file "$component_manifest" "model_item: $model_item"
+
+  for required_file in "${required_files[@]}"; do
+    add_component_file \
+      "$component_manifest" \
+      "$item_manifest" \
+      "$package_name" \
+      "$required_file"
+  done
+
+  finish_component_manifest "$item_manifest" "$package_name"
+}
+
+
+# ------------------------------------------------------------
+# SPEC_HEMS PACKAGE CREATION
+# ------------------------------------------------------------
+
+create_spec_package() {
+  local module_directory="$1"
+  local item_manifest="$2"
+  local module_name="$3"
+  local specification_item="$4"
+  local package_suffix="$5"
+  local specification_version="$6"
+
+  local package_name
+  local package_directory
+  local component_manifest
+
+  package_name="b_${module_name}_${specification_item}_${package_suffix}"
+  package_directory="${module_directory}/${package_name}"
+  component_manifest="${package_directory}/component-manifest.yaml"
+
+  make_dir "$package_directory"
+
+  local zip_file="${package_name}(${specification_version}).zip"
+
+  create_placeholder_file \
+    "${package_directory}/${zip_file}" \
+    "Compressed specification delivery package" \
+    "$module_name" \
+    "$package_name"
+
+  create_component_manifest_header \
+    "$component_manifest" \
+    "$package_name" \
+    "specification_delivery_package" \
+    "$module_name"
+
+  append_file "$component_manifest" "specification_item: $specification_item"
+  append_file "$component_manifest" "package_suffix: $package_suffix"
+  append_file "$component_manifest" "specification_version: $specification_version"
+  append_file "$component_manifest" "archive_format: zip"
+
+  add_component_file \
+    "$component_manifest" \
+    "$item_manifest" \
+    "$package_name" \
+    "$zip_file"
+
+  finish_component_manifest "$item_manifest" "$package_name"
+}
+
+
+# ------------------------------------------------------------
+# CREATE ONE MODULE IN ALL THREE AREAS
+# ------------------------------------------------------------
+
+create_module_structure() {
+  local function_name="$1"
+  local subfunction_name="$2"
+  local module_name="$3"
+
+  echo "Creating module:"
+  echo "  Function:     $function_name"
+  echo "  Sub-function: $subfunction_name"
+  echo "  Module:       $module_name"
+
+  # ----------------------------------------------------------
+  # CODE_HEMS
+  # ----------------------------------------------------------
+
+  local code_module_directory
+  local code_manifest
+
+  code_module_directory="${CODE_ROOT}/${function_name}/${subfunction_name}/${module_name}"
+  code_manifest="${code_module_directory}/code-manifest.yaml"
+
+  make_dir "$code_module_directory"
+
+  create_item_manifest \
+    "$code_manifest" \
+    "code" \
+    "CODE_HEMS" \
+    "$function_name" \
+    "$subfunction_name" \
+    "$module_name"
+
+  create_trace_links \
+    "${code_module_directory}/trace_links.csv" \
+    "CODE_HEMS" \
+    "$function_name" \
+    "$subfunction_name" \
+    "$module_name"
+
+  local index
+
+  for index in "${!CODE_MODEL_ITEMS[@]}"; do
+    create_code_package \
+      "$code_module_directory" \
+      "$code_manifest" \
+      "$module_name" \
+      "${CODE_MODEL_ITEMS[$index]}" \
+      "${CODE_RELEASES[$index]}" \
+      "${CODE_VERSIONS[$index]}"
+  done
+
+  # ----------------------------------------------------------
+  # MOD_HEMS
+  # ----------------------------------------------------------
+
+  local mod_module_directory
+  local mod_manifest
+
+  mod_module_directory="${MOD_ROOT}/${function_name}/${subfunction_name}/${module_name}"
+  mod_manifest="${mod_module_directory}/module-manifest.yaml"
+
+  make_dir "$mod_module_directory"
+
+  create_item_manifest \
+    "$mod_manifest" \
+    "module" \
+    "MOD_HEMS" \
+    "$function_name" \
+    "$subfunction_name" \
+    "$module_name"
+
+  create_trace_links \
+    "${mod_module_directory}/trace_links.csv" \
+    "MOD_HEMS" \
+    "$function_name" \
+    "$subfunction_name" \
+    "$module_name"
+
+  create_mod_target_package \
+    "$mod_module_directory" \
+    "$mod_manifest" \
+    "$module_name"
+
+  for model_item in "${CODE_MODEL_ITEMS[@]}"; do
+    create_mod_variant_package \
+      "$mod_module_directory" \
+      "$mod_manifest" \
+      "$module_name" \
+      "$model_item"
+  done
+
+  # ----------------------------------------------------------
+  # SPEC_HEMS
+  # ----------------------------------------------------------
+
+  local spec_module_directory
+  local spec_manifest
+
+  spec_module_directory="${SPEC_ROOT}/${function_name}/${subfunction_name}/${module_name}"
+  spec_manifest="${spec_module_directory}/spec-manifest.yaml"
+
+  make_dir "$spec_module_directory"
+
+  create_item_manifest \
+    "$spec_manifest" \
+    "specification" \
+    "SPEC_HEMS" \
+    "$function_name" \
+    "$subfunction_name" \
+    "$module_name"
+
+  create_trace_links \
+    "${spec_module_directory}/trace_links.csv" \
+    "SPEC_HEMS" \
+    "$function_name" \
+    "$subfunction_name" \
+    "$module_name"
+
+  for index in "${!SPEC_ITEMS[@]}"; do
+    create_spec_package \
+      "$spec_module_directory" \
+      "$spec_manifest" \
+      "$module_name" \
+      "${SPEC_ITEMS[$index]}" \
+      "${SPEC_SUFFIXES[$index]}" \
+      "${SPEC_VERSIONS[$index]}"
+  done
+
+  echo ""
+}
+
+
+# ------------------------------------------------------------
+# MAIN EXECUTION
+# ------------------------------------------------------------
+
+echo "============================================================"
+echo "Creating realistic nested HEMS sample structure"
+echo "============================================================"
+echo ""
+echo "Repository root:"
+echo "$REPO_ROOT"
+echo ""
+echo "HEMS root:"
+echo "$HEMS_ROOT"
+echo ""
+
+make_dir "$CODE_ROOT"
+make_dir "$MOD_ROOT"
+make_dir "$SPEC_ROOT"
+make_dir "$BASELINES_ROOT"
+
+write_file \
+  "${BASELINES_ROOT}/README.md" \
+  "# Baselines"
+
+append_file \
+  "${BASELINES_ROOT}/README.md" \
+  ""
+
+append_file \
+  "${BASELINES_ROOT}/README.md" \
+  "Baseline metadata and generated baseline records can be stored here."
+
+FUNCTIONS=(
+  "FLPC"
+  "ASXX"
+  "ATXX"
+)
+
+for function_name in "${FUNCTIONS[@]}"; do
+  subfunctions="$(subfunctions_for_function "$function_name")"
+
+  for subfunction_name in $subfunctions; do
+    modules="$(modules_for_subfunction "$subfunction_name")"
+
+    for module_name in $modules; do
+      create_module_structure \
+        "$function_name" \
+        "$subfunction_name" \
+        "$module_name"
+    done
+  done
+done
+
+
+# ------------------------------------------------------------
+# SUMMARY
+# ------------------------------------------------------------
+
+function_count="${#FUNCTIONS[@]}"
+
+subfunction_count="$(
+  find "$CODE_ROOT" \
+    -mindepth 2 \
+    -maxdepth 2 \
+    -type d \
+    | wc -l \
+    | xargs
+)"
+
+module_count_per_area="$(
+  find "$CODE_ROOT" \
+    -mindepth 3 \
+    -maxdepth 3 \
+    -type d \
+    | wc -l \
+    | xargs
+)"
+
+code_package_count="$(
+  find "$CODE_ROOT" \
+    -mindepth 4 \
+    -maxdepth 4 \
+    -type d \
+    | wc -l \
+    | xargs
+)"
+
+mod_package_count="$(
+  find "$MOD_ROOT" \
+    -mindepth 4 \
+    -maxdepth 4 \
+    -type d \
+    | wc -l \
+    | xargs
+)"
+
+spec_package_count="$(
+  find "$SPEC_ROOT" \
+    -mindepth 4 \
+    -maxdepth 4 \
+    -type d \
+    | wc -l \
+    | xargs
+)"
+
+total_module_count="$((module_count_per_area * 3))"
+total_package_count="$((code_package_count + mod_package_count + spec_package_count))"
 
 echo ""
-echo "Repair completed successfully."
+echo "============================================================"
+echo "HEMS sample structure created successfully"
+echo "============================================================"
 echo ""
-echo "Updated files:"
-echo "$CODE_DIR/code-manifest.yaml"
-echo "$CODE_DIR/trace_links.csv"
-echo "$MOD_DIR/module-manifest.yaml"
-echo "$MOD_DIR/trace_links.csv"
-echo "$SPEC_DIR/spec-manifest.yaml"
-echo "$SPEC_DIR/trace_links.csv"
+echo "Functions:                 $function_count"
+echo "Sub-functions per area:    $subfunction_count"
+echo "Modules per area:          $module_count_per_area"
+echo "Total modules:             $total_module_count"
+echo ""
+echo "CODE_HEMS packages:        $code_package_count"
+echo "MOD_HEMS packages:         $mod_

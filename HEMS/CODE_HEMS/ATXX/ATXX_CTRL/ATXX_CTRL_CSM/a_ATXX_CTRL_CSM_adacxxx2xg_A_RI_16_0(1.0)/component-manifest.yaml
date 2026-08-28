@@ -1,7 +1,0 @@
-component: a_ATXX_CTRL_CSM_adacxxx2xg_A_RI_16_0(1.0)
-type: generated_code_package
-parent_item: ATXX_CTRL_CSM
-files:
-  - ATXX_CTRL_CSM_adacxxx2xg.c
-  - ATXX_CTRL_CSM_adacxxx2xg.h
-  - ATXX_CTRL_CSM_adacxxx2xg_Memmap.h
