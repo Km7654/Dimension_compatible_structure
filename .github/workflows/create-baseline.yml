@@ -2,8 +2,7 @@ name: Automatic Merge Baseline
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
 
 permissions:
   contents: write
@@ -13,398 +12,199 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  create-merge-baseline:
-    name: Create ZIP, annotated tag, and release
+  baseline:
+    name: Create one annotated tag and baseline release
     runs-on: ubuntu-latest
-
     steps:
-      - name: Check required tools
+      - name: Verify runner tools
         shell: bash
         run: |
           set -euo pipefail
-
           for tool in git python3 gh base64; do
-            if ! command -v "$tool" >/dev/null 2>&1; then
-              echo "::error::Required runner tool is missing: $tool"
-              exit 1
-            fi
+            command -v "$tool" >/dev/null 2>&1 || { echo "::error::Missing tool: $tool"; exit 1; }
           done
 
-      - name: Checkout main using Git
+      - name: Checkout main with Git
         shell: bash
         env:
-          ACCESS_TOKEN: ${{ github.token }}
+          TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
           REPOSITORY: ${{ github.repository }}
           MERGE_SHA: ${{ github.sha }}
           BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
-
-          REPOSITORY_URL="${SERVER_URL}/${REPOSITORY}.git"
-          AUTH_VALUE="$(printf 'x-access-token:%s' "$ACCESS_TOKEN" | base64 | tr -d '\n')"
-
-          git init .
-          git remote add origin "$REPOSITORY_URL"
-          git config --local user.name "github-actions[bot]"
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH_VALUE}"
-
-          cleanup_auth() {
-            git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
-          }
-          trap cleanup_auth EXIT
-
-          git fetch --no-tags --prune origin \
-            "+refs/heads/main:refs/remotes/origin/main"
-
-          if ! git cat-file -e "${MERGE_SHA}^{commit}" 2>/dev/null; then
-            git fetch --no-tags origin "$MERGE_SHA"
-          fi
-
-          if [[ -n "$BEFORE_SHA" ]] && \
-             [[ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]] && \
-             ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+          URL="${SERVER_URL}/${REPOSITORY}.git"
+          AUTH="$(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')"
+          git init -b main .
+          git remote add origin "$URL"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH}"
+          trap 'git config --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true' EXIT
+          git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          git checkout --force --detach "$MERGE_SHA"
+          if [[ -n "$BEFORE_SHA" && "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]] && ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
             git fetch --no-tags origin "$BEFORE_SHA"
           fi
-
-          git checkout --force --detach "$MERGE_SHA"
-          git clean -ffdx
-
-          cleanup_auth
+          git config --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
           trap - EXIT
 
-      - name: Validate merge and collect changed HEMS files
-        id: baseline
+      - name: Determine baseline information
+        id: info
         shell: bash
         env:
-          MERGE_SHA: ${{ github.sha }}
           BEFORE_SHA: ${{ github.event.before }}
+          MERGE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-
-          if [[ -z "$BEFORE_SHA" ]] || \
-             [[ "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
-            echo "::notice::No valid commit exists before this push. Baseline creation is skipped."
-            echo "create=false" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [[ -z "$BEFORE_SHA" || "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "create=false" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          PARENTS="$(git rev-list --parents -n 1 "$MERGE_SHA" | awk '{print NF-1}')"
+          if [[ "$PARENTS" -lt 2 ]]; then
+            echo "::notice::Not a standard merge commit. No baseline created."
+            echo "create=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
 
-          if ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
-            echo "::error::Pre-merge commit is unavailable: $BEFORE_SHA"
-            exit 1
-          fi
-
-          PARENT_COUNT="$(git rev-list --parents -n 1 "$MERGE_SHA" | awk '{print NF - 1}')"
-          if [[ "$PARENT_COUNT" -lt 2 ]]; then
-            echo "::notice::Latest main commit is not a standard merge commit. Baseline creation is skipped."
-            echo "Commit: $MERGE_SHA"
-            echo "Parent count: $PARENT_COUNT"
-            echo "create=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          MERGE_SUBJECT="$(git log -1 --format='%s' "$MERGE_SHA")"
-          git log -1 --format='%B' "$MERGE_SHA" > merge-message.txt
-
-          if [[ -z "$MERGE_SUBJECT" ]]; then
-            echo "::error::Merge commit subject is empty."
-            exit 1
-          fi
-
-          # Use Python instead of sed so braces and other special characters
-          # in merge messages cannot break tag-name sanitization.
-          TAG_NAME="$(MERGE_SUBJECT_VALUE="$MERGE_SUBJECT" python3 - <<'PYTHON_TAG'
-          import os
-          import re
-
-          value = os.environ["MERGE_SUBJECT_VALUE"].strip()
-          value = re.sub(r"\s+", "-", value)
-          value = re.sub(r"[~^:?*\[\]\\@{}]+", "-", value)
-          value = value.replace("..", "-").replace("/", "-")
-          value = re.sub(r"-+", "-", value).strip(".-")
-          value = value.replace("@{", "-")
-          if value.endswith(".lock"):
-              value = value[:-5]
-          print(value[:120])
-          PYTHON_TAG
+          SUBJECT="$(git log -1 --format=%s "$MERGE_SHA")"
+          git log -1 --format=%B "$MERGE_SHA" > merge-message.txt
+          TAG="$(SUBJECT="$SUBJECT" python3 - <<'PY'
+          import os,re
+          s=os.environ['SUBJECT'].strip()
+          s=re.sub(r'\s+','-',s)
+          s=re.sub(r'[~^:?*\[\]\\@{}]+','-',s)
+          s=re.sub(r'-+','-',s.replace('..','-').replace('/','-')).strip('.-')
+          if s.endswith('.lock'): s=s[:-5]
+          print(s[:120])
+          PY
           )"
-
-          if [[ -z "$TAG_NAME" ]] || ! git check-ref-format "refs/tags/$TAG_NAME"; then
-            TAG_NAME="merge-${MERGE_SHA:0:12}"
-          fi
-
-          if git ls-remote --exit-code --tags origin "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
-            TAG_NAME="${TAG_NAME}-${MERGE_SHA:0:12}"
-          fi
+          if [[ -z "$TAG" ]] || ! git check-ref-format "refs/tags/$TAG"; then TAG="merge-${MERGE_SHA:0:12}"; fi
 
           : > changed-hems-files.txt
-          while IFS= read -r path; do
-            case "$path" in
-              HEMS/CODE_HEMS/*|HEMS/MOD_HEMS/*|HEMS/SPEC_HEMS/*)
-                if [[ -f "$path" ]]; then
-                  printf '%s\n' "$path" >> changed-hems-files.txt
-                fi
-                ;;
+          while IFS= read -r f; do
+            case "$f" in
+              HEMS/CODE_HEMS/*|HEMS/MOD_HEMS/*|HEMS/SPEC_HEMS/*) [[ -f "$f" ]] && printf '%s\n' "$f" >> changed-hems-files.txt ;;
             esac
           done < <(git diff --name-only --diff-filter=ACMR "$BEFORE_SHA" "$MERGE_SHA")
-
           sort -u changed-hems-files.txt -o changed-hems-files.txt
-
           if [[ ! -s changed-hems-files.txt ]]; then
-            echo "::notice::Merge contains no added, copied, modified, or renamed files in controlled HEMS areas."
-            echo "create=false" >> "$GITHUB_OUTPUT"
-            exit 0
+            echo "::notice::No changed controlled HEMS files. No baseline created."
+            echo "create=false" >> "$GITHUB_OUTPUT"; exit 0
           fi
 
           echo "create=true" >> "$GITHUB_OUTPUT"
-          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
-          echo "before_sha=$BEFORE_SHA" >> "$GITHUB_OUTPUT"
-          echo "merge_sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
-
-          echo "Merge subject: $MERGE_SUBJECT"
-          echo "Generated tag: $TAG_NAME"
-          echo "Changed HEMS files:"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "before=$BEFORE_SHA" >> "$GITHUB_OUTPUT"
+          echo "merge=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+          echo "Tag: $TAG"
           cat changed-hems-files.txt
 
-      - name: Build ZIP and baseline metadata
-        if: steps.baseline.outputs.create == 'true'
+      - name: Build ZIP, manifest, tree, checksums, and tag details
+        if: steps.info.outputs.create == 'true'
         shell: bash
         env:
-          TAG_NAME: ${{ steps.baseline.outputs.tag_name }}
-          BEFORE_SHA: ${{ steps.baseline.outputs.before_sha }}
-          MERGE_SHA: ${{ steps.baseline.outputs.merge_sha }}
+          TAG: ${{ steps.info.outputs.tag }}
+          BEFORE_SHA: ${{ steps.info.outputs.before }}
+          MERGE_SHA: ${{ steps.info.outputs.merge }}
           REPOSITORY: ${{ github.repository }}
-          ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, os, pathlib, shutil, subprocess, zipfile
+          tag=os.environ['TAG']; before=os.environ['BEFORE_SHA']; merge=os.environ['MERGE_SHA']; repo=os.environ['REPOSITORY']
+          files=[pathlib.Path(x) for x in pathlib.Path('changed-hems-files.txt').read_text().splitlines() if x]
+          message=pathlib.Path('merge-message.txt').read_text().strip()
+          modules=sorted({p.parts[4] for p in files if len(p.parts)>4})
+          specs=sorted({p.parts[5] for p in files if len(p.parts)>5 and p.parts[1]=='SPEC_HEMS'})
+          codes=sorted({p.parts[5] for p in files if len(p.parts)>5 and p.parts[1]=='CODE_HEMS'})
+          models=sorted({p.parts[5] for p in files if len(p.parts)>5 and p.parts[1]=='MOD_HEMS'})
+          root=pathlib.Path(f'merge-baseline-{tag}'); shutil.rmtree(root,ignore_errors=True); root.mkdir()
+          for p in files:
+            d=root/p; d.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(p,d)
+          q=lambda s:'"'+str(s).replace('\\','\\\\').replace('"','\\"')+'"'
+          manifest=[f'tag: {q(tag)}',f'repository: {q(repo)}',f'before_commit: {q(before)}',f'merge_commit: {q(merge)}','modules:']
+          manifest += [f'  - {q(x)}' for x in modules] or ['  []']
+          manifest += ['specifications:']+[f'  - {q(x)}' for x in specs] or ['  []']
+          manifest += ['released_files:']
+          checks=[]
+          for p in files:
+            h=hashlib.sha256(p.read_bytes()).hexdigest(); checks.append(f'{h}  {p}')
+            package=p.parts[5] if len(p.parts)>6 else 'not_applicable'
+            manifest += [f'  - path: {q(p)}',f'    module: {q(p.parts[4])}',f'    package: {q(package)}',f'    sha256: {q(h)}']
+          mp=pathlib.Path(f'baseline-manifest-{tag}.yaml'); mp.write_text('\n'.join(manifest)+'\n')
+          cp=pathlib.Path(f'checksums-{tag}.sha256'); cp.write_text('\n'.join(checks)+'\n')
+          tree={}
+          for p in files:
+            n=tree
+            for x in p.parts:n=n.setdefault(x,{})
+          def render(n,p=''):
+            out=[]; a=sorted(n.items())
+            for i,(k,v) in enumerate(a):
+              last=i==len(a)-1; out.append(p+('└── ' if last else '├── ')+k)
+              if v:out+=render(v,p+('    ' if last else '│   '))
+            return out
+          tp=pathlib.Path(f'baseline-folder-tree-{tag}.md'); tp.write_text(f'# HEMS Merge Baseline: {tag}\n\n```text\n'+'\n'.join(render(tree))+'\n```\n')
+          def sec(title,vals):return [title]+([f'- {x}' for x in vals] or ['- None'])
+          details=['HEMS automatic merge baseline','','Original merge message:',message,'',f'Repository: {repo}',f'Pre-merge commit: {before}',f'Merge commit: {merge}','']
+          details+=sec('Modules included:',modules)+['']+sec('Specifications included:',specs)+['']+sec('Code packages included:',codes)+['']+sec('Model packages included:',models)+['']+sec('Files included:',[str(x) for x in files])
+          dp=pathlib.Path(f'tag-message-{tag}.txt'); dp.write_text('\n'.join(details)+'\n')
+          for p in (mp,cp,tp,dp):shutil.copy2(p,root/p.name)
+          with zipfile.ZipFile(f'merge-baseline-{tag}.zip','w',zipfile.ZIP_DEFLATED) as z:
+            for p in root.rglob('*'):
+              if p.is_file():z.write(p,p.as_posix())
+          PY
 
-          python3 - <<'PYTHON_BASELINE'
-          import hashlib
-          import os
-          import pathlib
-          import subprocess
-          import zipfile
-
-          tag = os.environ["TAG_NAME"]
-          before_sha = os.environ["BEFORE_SHA"]
-          merge_sha = os.environ["MERGE_SHA"]
-          repository = os.environ["REPOSITORY"]
-          actor = os.environ["ACTOR"]
-
-          package_root = pathlib.Path(f"merge-baseline-{tag}")
-          zip_path = pathlib.Path(f"merge-baseline-{tag}.zip")
-          manifest_path = pathlib.Path(f"baseline-manifest-{tag}.yaml")
-          tree_path = pathlib.Path(f"baseline-folder-tree-{tag}.md")
-          checksum_path = pathlib.Path(f"checksums-{tag}.sha256")
-          tag_message_path = pathlib.Path(f"tag-message-{tag}.txt")
-
-          files = [
-              pathlib.Path(line.strip())
-              for line in pathlib.Path("changed-hems-files.txt").read_text(encoding="utf-8").splitlines()
-              if line.strip()
-          ]
-          merge_message = pathlib.Path("merge-message.txt").read_text(encoding="utf-8").strip()
-
-          modules = sorted({p.parts[4] for p in files if len(p.parts) >= 6})
-          specifications = sorted({
-              p.parts[5] for p in files
-              if len(p.parts) >= 7 and p.parts[1] == "SPEC_HEMS"
-          })
-          code_packages = sorted({
-              p.parts[5] for p in files
-              if len(p.parts) >= 7 and p.parts[1] == "CODE_HEMS"
-          })
-          model_packages = sorted({
-              p.parts[5] for p in files
-              if len(p.parts) >= 7 and p.parts[1] == "MOD_HEMS"
-          })
-
-          def quote(value):
-              value = str(value).replace("\\", "\\\\").replace('"', '\\"')
-              return f'"{value}"'
-
-          manifest = [
-              f"tag: {quote(tag)}",
-              f"repository: {quote(repository)}",
-              f"generated_by: {quote(actor)}",
-              f"before_commit: {quote(before_sha)}",
-              f"merge_commit: {quote(merge_sha)}",
-              "merge_message: |",
-          ]
-          manifest.extend(f"  {line}" for line in merge_message.splitlines())
-
-          for heading, values in (
-              ("modules", modules),
-              ("specifications", specifications),
-              ("code_packages", code_packages),
-              ("model_packages", model_packages),
-          ):
-              manifest.append(f"{heading}:")
-              if values:
-                  manifest.extend(f"  - {quote(value)}" for value in values)
-              else:
-                  manifest.append("  []")
-
-          manifest.append("released_files:")
-          checksums = []
-          for path in files:
-              digest = hashlib.sha256(path.read_bytes()).hexdigest()
-              last_commit = subprocess.check_output(
-                  ["git", "log", "-n", "1", "--format=%H", "--", str(path)],
-                  text=True,
-              ).strip() or "unknown"
-              package = path.parts[5] if len(path.parts) >= 7 else "not_applicable"
-              manifest.extend([
-                  f"  - path: {quote(path)}",
-                  f"    area: {quote(path.parts[1])}",
-                  f"    function: {quote(path.parts[2])}",
-                  f"    sub_function: {quote(path.parts[3])}",
-                  f"    module: {quote(path.parts[4])}",
-                  f"    package: {quote(package)}",
-                  f"    file_name: {quote(path.name)}",
-                  f"    sha256: {quote(digest)}",
-                  f"    last_changed_commit: {quote(last_commit)}",
-              ])
-              checksums.append(f"{digest}  {path}")
-
-          manifest_path.write_text("\n".join(manifest) + "\n", encoding="utf-8")
-          checksum_path.write_text("\n".join(checksums) + "\n", encoding="utf-8")
-
-          tree = {}
-          for path in files:
-              current = tree
-              for part in path.parts:
-                  current = current.setdefault(part, {})
-
-          def render(node, prefix=""):
-              lines = []
-              entries = sorted(node.items())
-              for index, (name, child) in enumerate(entries):
-                  last = index == len(entries) - 1
-                  lines.append(prefix + ("└── " if last else "├── ") + name)
-                  if child:
-                      lines.extend(render(child, prefix + ("    " if last else "│   ")))
-              return lines
-
-          tree_path.write_text(
-              "\n".join([
-                  f"# HEMS Merge Baseline: {tag}",
-                  "",
-                  "```text",
-                  *render(tree),
-                  "```",
-                  "",
-                  f"Total released files: {len(files)}",
-              ]) + "\n",
-              encoding="utf-8",
-          )
-
-          def section(title, values):
-              result = [title]
-              result.extend(f"- {value}" for value in values)
-              if not values:
-                  result.append("- None")
-              return result
-
-          tag_message = [
-              "HEMS automatic merge baseline",
-              "",
-              "Original merge message:",
-              merge_message,
-              "",
-              f"Repository: {repository}",
-              f"Pre-merge commit: {before_sha}",
-              f"Merge commit: {merge_sha}",
-              "",
-              *section("Modules included:", modules),
-              "",
-              *section("Specifications included:", specifications),
-              "",
-              *section("Code packages included:", code_packages),
-              "",
-              *section("Model packages included:", model_packages),
-              "",
-              *section("Files included:", [str(path) for path in files]),
-              "",
-              f"ZIP asset: {zip_path.name}",
-          ]
-          tag_message_path.write_text("\n".join(tag_message) + "\n", encoding="utf-8")
-
-          package_root.mkdir(parents=True, exist_ok=True)
-          for source in files:
-              destination = package_root / source
-              destination.parent.mkdir(parents=True, exist_ok=True)
-              destination.write_bytes(source.read_bytes())
-
-          for metadata in (manifest_path, tree_path, checksum_path, tag_message_path):
-              (package_root / metadata.name).write_bytes(metadata.read_bytes())
-
-          with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
-              for item in sorted(package_root.rglob("*")):
-                  if item.is_file():
-                      archive.write(item, item.as_posix())
-
-          print(f"ZIP: {zip_path}")
-          print(f"Modules: {len(modules)}")
-          print(f"Specifications: {len(specifications)}")
-          print(f"Files: {len(files)}")
-          PYTHON_BASELINE
-
-          ls -lh \
-            "merge-baseline-${TAG_NAME}.zip" \
-            "baseline-manifest-${TAG_NAME}.yaml" \
-            "baseline-folder-tree-${TAG_NAME}.md" \
-            "checksums-${TAG_NAME}.sha256" \
-            "tag-message-${TAG_NAME}.txt"
-
-      - name: Create and push annotated Git tag
-        if: steps.baseline.outputs.create == 'true'
+      - name: Create or reuse exactly one annotated tag
+        if: steps.info.outputs.create == 'true'
         shell: bash
         env:
-          ACCESS_TOKEN: ${{ github.token }}
+          TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
-          TAG_NAME: ${{ steps.baseline.outputs.tag_name }}
-          MERGE_SHA: ${{ steps.baseline.outputs.merge_sha }}
+          TAG: ${{ steps.info.outputs.tag }}
+          MERGE_SHA: ${{ steps.info.outputs.merge }}
         run: |
           set -euo pipefail
-
-          AUTH_VALUE="$(printf 'x-access-token:%s' "$ACCESS_TOKEN" | base64 | tr -d '\n')"
-          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH_VALUE}"
-
-          cleanup_auth() {
-            git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
-          }
-          trap cleanup_auth EXIT
-
-          git tag --annotate "$TAG_NAME" "$MERGE_SHA" \
-            --file "tag-message-${TAG_NAME}.txt"
-          git push origin "refs/tags/$TAG_NAME"
-
-          cleanup_auth
+          AUTH="$(printf 'x-access-token:%s' "$TOKEN" | base64 | tr -d '\n')"
+          git config http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH}"
+          trap 'git config --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true' EXIT
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+            git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+            EXISTING="$(git rev-list -n 1 "$TAG")"
+            if [[ "$EXISTING" != "$MERGE_SHA" ]]; then
+              echo "::error::Tag '$TAG' already exists on different commit $EXISTING. No second tag will be created."
+              exit 1
+            fi
+            echo "Reusing existing tag '$TAG' on this merge commit."
+          else
+            git tag -a "$TAG" "$MERGE_SHA" -F "tag-message-${TAG}.txt"
+            git push origin "refs/tags/$TAG"
+            echo "Created one annotated tag: $TAG"
+          fi
+          git config --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
           trap - EXIT
 
-      - name: Create GitHub Release and upload baseline assets
-        if: steps.baseline.outputs.create == 'true'
+      - name: Create or reuse one GitHub Release
+        if: steps.info.outputs.create == 'true'
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          SERVER_URL: ${{ github.server_url }}
-          TAG_NAME: ${{ steps.baseline.outputs.tag_name }}
+          GH_HOST: ${{ github.server_url }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ steps.info.outputs.tag }}
         run: |
           set -euo pipefail
-
-          GH_HOST="${SERVER_URL#https://}"
-          GH_HOST="${GH_HOST#http://}"
-
-          gh release create "$TAG_NAME" \
-            "merge-baseline-${TAG_NAME}.zip" \
-            "baseline-manifest-${TAG_NAME}.yaml" \
-            "baseline-folder-tree-${TAG_NAME}.md" \
-            "checksums-${TAG_NAME}.sha256" \
-            --hostname "$GH_HOST" \
-            --title "HEMS Merge Baseline: $TAG_NAME" \
-            --notes-file "tag-message-${TAG_NAME}.txt" \
+          GH_HOST="${GH_HOST#https://}"; GH_HOST="${GH_HOST#http://}"
+          export GH_HOST GH_REPO
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release '$TAG' already exists. No duplicate release created."
+            exit 0
+          fi
+          gh release create "$TAG" \
+            "merge-baseline-${TAG}.zip" \
+            "baseline-manifest-${TAG}.yaml" \
+            "baseline-folder-tree-${TAG}.md" \
+            "checksums-${TAG}.sha256" \
+            --title "HEMS Merge Baseline: $TAG" \
+            --notes-file "tag-message-${TAG}.txt" \
             --verify-tag
-
-          echo "Baseline release created for tag: $TAG_NAME"
