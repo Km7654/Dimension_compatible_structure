@@ -1,611 +1,415 @@
-name: Create Baseline
+name: Automatic Merge Baseline
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Baseline version/tag, example: v1.0.0"
-        required: true
-        type: string
-
-      delivery_cycle:
-        description: "Delivery cycle, example: MD31_01"
-        required: true
-        default: "MD31_01"
-        type: string
-
-      release_scope:
-        description: "Choose release scope"
-        required: true
-        type: choice
-        options:
-          - full_hems
-          - spec_hems
-          - mod_hems
-          - code_hems
-          - function
-          - sub_function
-          - module
-          - item
-          - approved_custom_paths
-
-      selected_path:
-        description: "Required for function/sub_function/module/item. Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL"
-        required: false
-        type: string
-
-      approved_custom_paths:
-        description: "Only for approved_custom_paths. Comma-separated HEMS files/folders"
-        required: false
-        type: string
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
 
+concurrency:
+  group: automatic-merge-baseline-main
+  cancel-in-progress: false
+
 jobs:
-  create-baseline:
+  create-merge-baseline:
+    name: Create baseline package and annotated tag
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Install required tools
+      - name: Check required runner tools
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y zip
 
-      - name: Configure Git user
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          required_tools=(git python3 gh sha256sum awk sed)
 
-      - name: Validate inputs and version
+          for tool in "${required_tools[@]}"; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "::error::Required tool is not installed on the runner: $tool"
+              exit 1
+            fi
+          done
+
+      - name: Checkout exact main commit using Git
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHECKOUT_TOKEN: ${{ github.token }}
+          CHECKOUT_SHA: ${{ github.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.version }}"
-          SCOPE="${{ inputs.release_scope }}"
-          SELECTED_PATH="${{ inputs.selected_path }}"
-          CUSTOM_PATHS="${{ inputs.approved_custom_paths }}"
+          REPOSITORY_URL="${SERVER_URL}/${REPOSITORY}.git"
+          BASIC_AUTH="$(printf 'x-access-token:%s' "$CHECKOUT_TOKEN" | base64 | tr -d '\n')"
 
-          echo "Version: $VERSION"
-          echo "Release scope: $SCOPE"
-          echo "Selected path: ${SELECTED_PATH:-not_applicable}"
+          git init .
+          git remote add origin "$REPOSITORY_URL"
+          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${BASIC_AUTH}"
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git fetch --tags
-
-          if git rev-parse "$VERSION" >/dev/null 2>&1; then
-            echo "ERROR: Tag $VERSION already exists."
-            echo "Use a new version, for example v1.0.1."
-            exit 1
-          fi
-
-          if gh release view "$VERSION" >/dev/null 2>&1; then
-            echo "ERROR: GitHub Release $VERSION already exists."
-            echo "Use a new version."
-            exit 1
-          fi
-
-          if [[ "$SCOPE" == "function" || "$SCOPE" == "sub_function" || "$SCOPE" == "module" || "$SCOPE" == "item" ]]; then
-            if [[ -z "$SELECTED_PATH" ]]; then
-              echo "ERROR: selected_path is required for scope $SCOPE."
-              exit 1
-            fi
-
-            if [[ "$SELECTED_PATH" != HEMS/* ]]; then
-              echo "ERROR: selected_path must be under HEMS."
-              echo "Use forward slashes, example: HEMS/MOD_HEMS/ATXX/ATXX_MAIN/ATXX_MAIN_CTL"
-              exit 1
-            fi
-
-            if [[ ! -e "$SELECTED_PATH" ]]; then
-              echo "ERROR: selected_path does not exist: $SELECTED_PATH"
-              exit 1
-            fi
-          fi
-
-          if [[ "$SCOPE" == "function" ]]; then
-            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
-
-            if (( ${#parts[@]} != 3 )); then
-              echo "ERROR: function scope path must be HEMS/AREA/Function."
-              echo "Example: HEMS/MOD_HEMS/ASXX"
-              exit 1
-            fi
-
-            if [[ "${parts[1]}" != "SPEC_HEMS" && "${parts[1]}" != "MOD_HEMS" && "${parts[1]}" != "CODE_HEMS" ]]; then
-              echo "ERROR: function scope must be under SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
-              exit 1
-            fi
-          fi
-
-          if [[ "$SCOPE" == "sub_function" ]]; then
-            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
-
-            if (( ${#parts[@]} != 4 )); then
-              echo "ERROR: sub_function scope path must be HEMS/AREA/Function/Sub-function."
-              echo "Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX"
-              exit 1
-            fi
-
-            if [[ "${parts[1]}" != "SPEC_HEMS" && "${parts[1]}" != "MOD_HEMS" && "${parts[1]}" != "CODE_HEMS" ]]; then
-              echo "ERROR: sub_function scope must be under SPEC_HEMS, MOD_HEMS, or CODE_HEMS."
-              exit 1
-            fi
-          fi
-
-          if [[ "$SCOPE" == "module" ]]; then
-            IFS='/' read -r -a parts <<< "$SELECTED_PATH"
-
-            if (( ${#parts[@]} != 5 )); then
-              echo "ERROR: module scope path must be HEMS/AREA/Function/Sub-function/Module."
-              echo "Example: HEMS/MOD_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL"
-              exit 1
-            fi
-
-            if [[ ! -d "$SELECTED_PATH" ]]; then
-              echo "ERROR: module scope selected_path must be a folder."
-              exit 1
-            fi
-          fi
-
-          if [[ "$SCOPE" == "item" ]]; then
-            if [[ ! -f "$SELECTED_PATH" ]]; then
-              echo "ERROR: item scope selected_path must be a file."
-              exit 1
-            fi
-          fi
-
-          if [[ "$SCOPE" == "approved_custom_paths" ]]; then
-            if [[ -z "$CUSTOM_PATHS" ]]; then
-              echo "ERROR: approved_custom_paths is required for approved_custom_paths scope."
-              exit 1
-            fi
-          fi
-
-      - name: Generate package-level manifests
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          HEMS_ROOT="HEMS"
-          VERSION="${{ inputs.version }}"
-          DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
-          COMMIT_ID="${{ github.sha }}"
-
-          echo "Generating package-level manifests..."
-
-          generate_manifest() {
-            local module_dir="$1"
-            local manifest_file="$2"
-            local area="$3"
-            local type="$4"
-
-            local module
-            local sub_function
-            local function_name
-
-            module="$(basename "$module_dir")"
-            sub_function="$(basename "$(dirname "$module_dir")")"
-            function_name="$(basename "$(dirname "$(dirname "$module_dir")")")"
-
-            {
-              echo "module: $module"
-              echo "type: $type"
-              echo "area: $area"
-              echo "function: $function_name"
-              echo "sub_function: $sub_function"
-              echo "version: $VERSION"
-              echo "delivery_cycle: $DELIVERY_CYCLE"
-              echo "commit: $COMMIT_ID"
-              echo "generated_by: GitHub Actions"
-              echo "generated_on: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-              echo "files:"
-            } > "$manifest_file"
-
-            find "$module_dir" -maxdepth 1 -type f ! -name "$(basename "$manifest_file")" | sort | while read -r file; do
-              relative_file="$(basename "$file")"
-              echo "  - $relative_file" >> "$manifest_file"
-            done
+          cleanup_credentials() {
+            git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
           }
+          trap cleanup_credentials EXIT
 
-          if [[ -d "$HEMS_ROOT/CODE_HEMS" ]]; then
-            while IFS= read -r dir; do
-              generate_manifest "$dir" "$dir/code-manifest.yaml" "CODE_HEMS" "code"
-            done < <(find "$HEMS_ROOT/CODE_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
+          git fetch --no-tags --prune origin \
+            "+refs/heads/main:refs/remotes/origin/main"
+
+          if ! git cat-file -e "${CHECKOUT_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$CHECKOUT_SHA"
           fi
 
-          if [[ -d "$HEMS_ROOT/MOD_HEMS" ]]; then
-            while IFS= read -r dir; do
-              generate_manifest "$dir" "$dir/module-manifest.yaml" "MOD_HEMS" "module"
-            done < <(find "$HEMS_ROOT/MOD_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
+          if [[ -n "$BEFORE_SHA" ]] && \
+             [[ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]] && \
+             ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$BEFORE_SHA"
           fi
 
-          if [[ -d "$HEMS_ROOT/SPEC_HEMS" ]]; then
-            while IFS= read -r dir; do
-              generate_manifest "$dir" "$dir/spec-manifest.yaml" "SPEC_HEMS" "specification"
-            done < <(find "$HEMS_ROOT/SPEC_HEMS" -mindepth 3 -maxdepth 3 -type d | sort)
-          fi
+          git checkout --force --detach "$CHECKOUT_SHA"
+          git clean -ffdx
 
-      - name: Collect selected released files
+          cleanup_credentials
+          trap - EXIT
+
+      - name: Validate merge and determine changed HEMS files
+        id: merge
         shell: bash
+        env:
+          MERGE_SHA: ${{ github.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.version }}"
-          SCOPE="${{ inputs.release_scope }}"
-          SELECTED_PATH="${{ inputs.selected_path }}"
-          CUSTOM_PATHS="${{ inputs.approved_custom_paths }}"
+          if [[ -z "$BEFORE_SHA" ]] || \
+             [[ "$BEFORE_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "::notice::No valid pre-push commit is available. Baseline creation is skipped."
+            echo "create_baseline=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-          SELECTED_FILES="selected-files.txt"
-          RELEASE_DIR="baseline-selection-$VERSION"
-
-          rm -rf "$RELEASE_DIR"
-          mkdir -p "$RELEASE_DIR"
-          : > "$SELECTED_FILES"
-
-          echo "Collecting files for scope: $SCOPE"
-
-          case "$SCOPE" in
-            full_hems)
-              find HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
-              ;;
-
-            spec_hems)
-              find HEMS/SPEC_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
-              ;;
-
-            mod_hems)
-              find HEMS/MOD_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
-              ;;
-
-            code_hems)
-              find HEMS/CODE_HEMS -type f 2>/dev/null | sort > "$SELECTED_FILES"
-              ;;
-
-            function)
-              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
-              ;;
-
-            sub_function)
-              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
-              ;;
-
-            module)
-              find "$SELECTED_PATH" -type f 2>/dev/null | sort > "$SELECTED_FILES"
-              ;;
-
-            item)
-              echo "$SELECTED_PATH" > "$SELECTED_FILES"
-              ;;
-
-            approved_custom_paths)
-              echo "$CUSTOM_PATHS" | tr ',' '\n' | while read -r raw_path; do
-                clean_path="$(echo "$raw_path" | xargs)"
-
-                if [[ -z "$clean_path" ]]; then
-                  continue
-                fi
-
-                if [[ "$clean_path" != HEMS/* ]]; then
-                  echo "ERROR: Custom path must be under HEMS: $clean_path"
-                  exit 1
-                fi
-
-                if [[ -f "$clean_path" ]]; then
-                  echo "$clean_path" >> "$SELECTED_FILES"
-                elif [[ -d "$clean_path" ]]; then
-                  find "$clean_path" -type f 2>/dev/null | sort >> "$SELECTED_FILES"
-                else
-                  echo "ERROR: Custom path does not exist: $clean_path"
-                  exit 1
-                fi
-              done
-
-              sort -u "$SELECTED_FILES" -o "$SELECTED_FILES"
-              ;;
-          esac
-
-          grep -v "^HEMS/BASELINES/" "$SELECTED_FILES" > selected-files-clean.txt || true
-          grep -v "^HEMS/INCOMING/" selected-files-clean.txt > selected-files-clean-2.txt || true
-          grep -v "^HEMS/DELIVERY_REQUESTS/" selected-files-clean-2.txt > selected-files-clean-3.txt || true
-          mv selected-files-clean-3.txt "$SELECTED_FILES"
-          rm -f selected-files-clean.txt selected-files-clean-2.txt
-
-          if [[ ! -s "$SELECTED_FILES" ]]; then
-            echo "ERROR: No files selected for release."
+          if ! git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            echo "::error::The pre-merge commit is not available: $BEFORE_SHA"
             exit 1
           fi
 
-          echo "Selected files:"
-          cat "$SELECTED_FILES"
+          PARENT_COUNT="$(git rev-list --parents -n 1 "$MERGE_SHA" | awk '{print NF - 1}')"
 
-          while IFS= read -r file; do
-            mkdir -p "$RELEASE_DIR/$(dirname "$file")"
-            cp "$file" "$RELEASE_DIR/$file"
-          done < "$SELECTED_FILES"
+          if [[ "$PARENT_COUNT" -lt 2 ]]; then
+            echo "::notice::The push to main is not a merge commit. Baseline creation is skipped."
+            echo "Commit: $MERGE_SHA"
+            echo "Parent count: $PARENT_COUNT"
+            echo "create_baseline=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
 
-      - name: Generate baseline manifest with released files and versions
+          MERGE_SUBJECT="$(git log -1 --format='%s' "$MERGE_SHA")"
+          MERGE_MESSAGE="$(git log -1 --format='%B' "$MERGE_SHA")"
+
+          if [[ -z "$MERGE_SUBJECT" ]]; then
+            echo "::error::The merge commit subject is empty and cannot be used to create a tag."
+            exit 1
+          fi
+
+          # Git tags cannot contain spaces or several special characters.
+          # Convert the merge subject to a safe tag while preserving its meaning.
+          TAG_NAME="$(printf '%s' "$MERGE_SUBJECT" \
+            | tr '[:space:]' '-' \
+            | sed -E 's#[~^:?*\\\[\]@{}]+#-#g; s#\.\.+#-#g; s#/+ #-#g; s#/+#-#g; s#-+#-#g; s#^[.-]+##; s#[.-]+$##')"
+
+          TAG_NAME="${TAG_NAME:0:120}"
+
+          if [[ -z "$TAG_NAME" ]]; then
+            TAG_NAME="merge-${MERGE_SHA:0:12}"
+          fi
+
+          if ! git check-ref-format "refs/tags/$TAG_NAME"; then
+            TAG_NAME="merge-${MERGE_SHA:0:12}"
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG_NAME" >/dev/null 2>&1; then
+            TAG_NAME="${TAG_NAME}-${MERGE_SHA:0:12}"
+          fi
+
+          git diff --name-only --diff-filter=ACMR "$BEFORE_SHA" "$MERGE_SHA" \
+            | grep -E '^HEMS/(CODE_HEMS|MOD_HEMS|SPEC_HEMS)/' \
+            | while IFS= read -r path; do
+                if [[ -f "$path" ]]; then
+                  printf '%s\n' "$path"
+                fi
+              done \
+            | sort -u > changed-hems-files.txt
+
+          if [[ ! -s changed-hems-files.txt ]]; then
+            echo "::notice::The merge contains no added, copied, modified, or renamed files under the controlled HEMS areas."
+            echo "create_baseline=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          printf '%s\n' "$MERGE_MESSAGE" > merge-message.txt
+          printf '%s\n' "$TAG_NAME" > tag-name.txt
+
+          echo "create_baseline=true" >> "$GITHUB_OUTPUT"
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "before_sha=$BEFORE_SHA" >> "$GITHUB_OUTPUT"
+          echo "merge_sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+
+          echo "Merge subject: $MERGE_SUBJECT"
+          echo "Generated tag: $TAG_NAME"
+          echo "Changed controlled HEMS files:"
+          cat changed-hems-files.txt
+
+      - name: Build baseline metadata and ZIP package
+        if: steps.merge.outputs.create_baseline == 'true'
         shell: bash
+        env:
+          TAG_NAME: ${{ steps.merge.outputs.tag_name }}
+          BEFORE_SHA: ${{ steps.merge.outputs.before_sha }}
+          MERGE_SHA: ${{ steps.merge.outputs.merge_sha }}
+          REPOSITORY: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.version }}"
-          DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
-          SCOPE="${{ inputs.release_scope }}"
-          SELECTED_PATH="${{ inputs.selected_path }}"
+          PACKAGE_ROOT="merge-baseline-${TAG_NAME}"
+          ZIP_FILE="merge-baseline-${TAG_NAME}.zip"
+          MANIFEST_FILE="baseline-manifest-${TAG_NAME}.yaml"
+          TREE_FILE="baseline-folder-tree-${TAG_NAME}.md"
+          CHECKSUM_FILE="checksums-${TAG_NAME}.sha256"
+          TAG_MESSAGE_FILE="tag-message-${TAG_NAME}.txt"
 
-          BASELINE_DIR="HEMS/BASELINES/$VERSION"
-          BASELINE_MANIFEST="$BASELINE_DIR/baseline-manifest.yaml"
-          RELEASE_DIR="baseline-selection-$VERSION"
-          ITEM_VERSION_INDEX="HEMS/BASELINES/ITEM_VERSIONS/item-version-index.csv"
-
-          mkdir -p "$BASELINE_DIR"
-
-          {
-            echo "baseline: $VERSION"
-            echo "delivery_cycle: $DELIVERY_CYCLE"
-            echo "release_scope: $SCOPE"
-            echo "selected_path: ${SELECTED_PATH:-not_applicable}"
-            echo "release_commit: ${{ github.sha }}"
-            echo "branch: ${{ github.ref_name }}"
-            echo "generated_by: GitHub Actions"
-            echo "generated_on: $(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-            echo ""
-            echo "released_files:"
-          } > "$BASELINE_MANIFEST"
+          rm -rf "$PACKAGE_ROOT" "$ZIP_FILE"
+          mkdir -p "$PACKAGE_ROOT"
 
           while IFS= read -r file; do
-            IFS='/' read -r -a parts <<< "$file"
+            [[ -z "$file" ]] && continue
+            mkdir -p "$PACKAGE_ROOT/$(dirname "$file")"
+            cp -- "$file" "$PACKAGE_ROOT/$file"
+          done < changed-hems-files.txt
 
-            area="${parts[1]:-unknown}"
-            function_name="${parts[2]:-unknown}"
-            sub_function="${parts[3]:-unknown}"
-            module="${parts[4]:-unknown}"
-            item="${parts[5]:-$(basename "$file")}"
-
-            file_hash="$(sha256sum "$file" | awk '{print $1}')"
-            last_changed_commit="$(git log -n 1 --format="%H" -- "$file" || echo "unknown")"
-
-            item_spec_version="not_versioned"
-            item_version_tag="not_available"
-            item_latest_merge_commit="not_available"
-            item_latest_pull_request="not_available"
-
-            if [[ -f "$ITEM_VERSION_INDEX" ]]; then
-              matched_line="$(awk -F',' -v item_path="$file" 'NR > 1 && $1 == item_path {print $0}' "$ITEM_VERSION_INDEX" | tail -n 1 || true)"
-
-              if [[ -n "$matched_line" ]]; then
-                item_spec_version="$(echo "$matched_line" | awk -F',' '{print $2}')"
-                item_version_tag="$(echo "$matched_line" | awk -F',' '{print $3}')"
-                item_latest_merge_commit="$(echo "$matched_line" | awk -F',' '{print $4}')"
-                item_latest_pull_request="$(echo "$matched_line" | awk -F',' '{print $5}')"
-              fi
-            fi
-
-            {
-              echo "  - path: $file"
-              echo "    area: $area"
-              echo "    function: $function_name"
-              echo "    sub_function: $sub_function"
-              echo "    module: $module"
-              echo "    item: $item"
-              echo "    release_version: $VERSION"
-              echo "    item_spec_version: $item_spec_version"
-              echo "    item_version_tag: $item_version_tag"
-              echo "    item_latest_merge_commit: $item_latest_merge_commit"
-              echo "    item_latest_pull_request: $item_latest_pull_request"
-              echo "    release_commit: ${{ github.sha }}"
-              echo "    last_changed_commit: $last_changed_commit"
-              echo "    sha256: $file_hash"
-            } >> "$BASELINE_MANIFEST"
-          done < selected-files.txt
-
-          cp "$BASELINE_MANIFEST" "$RELEASE_DIR/baseline-manifest-$VERSION.yaml"
-
-          echo "Generated baseline manifest:"
-          cat "$BASELINE_MANIFEST"
-
-      - name: Generate folder structure preview
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          VERSION="${{ inputs.version }}"
-          BASELINE_DIR="HEMS/BASELINES/$VERSION"
-          RELEASE_DIR="baseline-selection-$VERSION"
-          FOLDER_TREE_FILE="$BASELINE_DIR/baseline-folder-tree-$VERSION.md"
-
-          mkdir -p "$BASELINE_DIR"
-          mkdir -p "$RELEASE_DIR"
-
-          echo "Generating baseline folder tree preview..."
-
-          python3 << 'PYTHON_SCRIPT'
+          python3 - <<'PYTHON_SCRIPT'
+          import hashlib
           import os
+          import pathlib
+          import subprocess
+          import zipfile
 
-          version = os.environ["VERSION_VALUE"]
-          selected_files_path = "selected-files.txt"
-          output_file = os.environ["FOLDER_TREE_FILE_VALUE"]
+          tag = os.environ["TAG_NAME"]
+          before_sha = os.environ["BEFORE_SHA"]
+          merge_sha = os.environ["MERGE_SHA"]
+          repository = os.environ["REPOSITORY"]
+          actor = os.environ["ACTOR"]
+
+          package_root = pathlib.Path(f"merge-baseline-{tag}")
+          zip_file = pathlib.Path(f"merge-baseline-{tag}.zip")
+          manifest_file = pathlib.Path(f"baseline-manifest-{tag}.yaml")
+          tree_file = pathlib.Path(f"baseline-folder-tree-{tag}.md")
+          checksum_file = pathlib.Path(f"checksums-{tag}.sha256")
+          tag_message_file = pathlib.Path(f"tag-message-{tag}.txt")
+
+          files = [
+              pathlib.Path(line.strip())
+              for line in pathlib.Path("changed-hems-files.txt").read_text(encoding="utf-8").splitlines()
+              if line.strip()
+          ]
+          merge_message = pathlib.Path("merge-message.txt").read_text(encoding="utf-8").strip()
+
+          modules = sorted({p.parts[4] for p in files if len(p.parts) >= 6})
+          spec_packages = sorted({
+              p.parts[5]
+              for p in files
+              if len(p.parts) >= 7 and p.parts[1] == "SPEC_HEMS"
+          })
+          code_packages = sorted({
+              p.parts[5]
+              for p in files
+              if len(p.parts) >= 7 and p.parts[1] == "CODE_HEMS"
+          })
+          model_packages = sorted({
+              p.parts[5]
+              for p in files
+              if len(p.parts) >= 7 and p.parts[1] == "MOD_HEMS"
+          })
+
+          def yaml_quote(value):
+              value = str(value).replace("\\", "\\\\").replace('"', '\\"')
+              return f'"{value}"'
+
+          manifest_lines = [
+              f"tag: {yaml_quote(tag)}",
+              f"repository: {yaml_quote(repository)}",
+              f"generated_by: {yaml_quote(actor)}",
+              f"before_commit: {yaml_quote(before_sha)}",
+              f"merge_commit: {yaml_quote(merge_sha)}",
+              "merge_message: |",
+          ]
+          manifest_lines.extend(f"  {line}" for line in merge_message.splitlines())
+          manifest_lines.append("modules:")
+          manifest_lines.extend(f"  - {yaml_quote(value)}" for value in modules)
+          manifest_lines.append("specifications:")
+          manifest_lines.extend(f"  - {yaml_quote(value)}" for value in spec_packages)
+          manifest_lines.append("code_packages:")
+          manifest_lines.extend(f"  - {yaml_quote(value)}" for value in code_packages)
+          manifest_lines.append("model_packages:")
+          manifest_lines.extend(f"  - {yaml_quote(value)}" for value in model_packages)
+          manifest_lines.append("released_files:")
+
+          checksum_lines = []
+          for path in files:
+              digest = hashlib.sha256(path.read_bytes()).hexdigest()
+              last_commit = subprocess.check_output(
+                  ["git", "log", "-n", "1", "--format=%H", "--", str(path)],
+                  text=True,
+              ).strip() or "unknown"
+              manifest_lines.extend([
+                  f"  - path: {yaml_quote(path)}",
+                  f"    sha256: {yaml_quote(digest)}",
+                  f"    last_changed_commit: {yaml_quote(last_commit)}",
+              ])
+              checksum_lines.append(f"{digest}  {path}")
+
+          manifest_file.write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
+          checksum_file.write_text("\n".join(checksum_lines) + "\n", encoding="utf-8")
 
           tree = {}
-
-          with open(selected_files_path, "r", encoding="utf-8") as f:
-              files = [line.strip() for line in f if line.strip()]
-
-          for file_path in files:
-              parts = file_path.split("/")
+          for path in files:
               current = tree
-              for part in parts:
+              for part in path.parts:
                   current = current.setdefault(part, {})
 
           def render_tree(node, prefix=""):
               lines = []
-              items = sorted(node.items())
-              for index, (name, child) in enumerate(items):
-                  connector = "└── " if index == len(items) - 1 else "├── "
-                  lines.append(prefix + connector + name)
+              entries = sorted(node.items())
+              for index, (name, child) in enumerate(entries):
+                  last = index == len(entries) - 1
+                  lines.append(prefix + ("└── " if last else "├── ") + name)
                   if child:
-                      extension = "    " if index == len(items) - 1 else "│   "
-                      lines.extend(render_tree(child, prefix + extension))
+                      lines.extend(render_tree(child, prefix + ("    " if last else "│   ")))
               return lines
 
-          lines = []
-          lines.append(f"# Baseline Folder Structure - {version}")
-          lines.append("")
-          lines.append("This file shows the folder/file structure included in this baseline release.")
-          lines.append("")
-          lines.append("```text")
-          lines.extend(render_tree(tree))
-          lines.append("```")
-          lines.append("")
-          lines.append("## Total Released Files")
-          lines.append("")
-          lines.append(str(len(files)))
+          tree_lines = [
+              f"# Merge Baseline Folder Structure: {tag}",
+              "",
+              "```text",
+              *render_tree(tree),
+              "```",
+              "",
+              f"Total released files: {len(files)}",
+          ]
+          tree_file.write_text("\n".join(tree_lines) + "\n", encoding="utf-8")
 
-          with open(output_file, "w", encoding="utf-8") as out:
-              out.write("\n".join(lines))
+          def section(title, values):
+              lines = [title]
+              lines.extend(f"- {value}" for value in values)
+              if not values:
+                  lines.append("- None")
+              return lines
+
+          tag_lines = [
+              "HEMS automatic merge baseline",
+              "",
+              "Original merge message:",
+              merge_message,
+              "",
+              f"Repository: {repository}",
+              f"Pre-merge commit: {before_sha}",
+              f"Merge commit: {merge_sha}",
+              "",
+              *section("Modules included:", modules),
+              "",
+              *section("Specifications included:", spec_packages),
+              "",
+              *section("Code packages included:", code_packages),
+              "",
+              *section("Model packages included:", model_packages),
+              "",
+              *section("Files included:", [str(path) for path in files]),
+              "",
+              f"ZIP asset: {zip_file.name}",
+          ]
+          tag_message_file.write_text("\n".join(tag_lines) + "\n", encoding="utf-8")
+
+          for metadata in (manifest_file, tree_file, checksum_file, tag_message_file):
+              (package_root / metadata.name).write_bytes(metadata.read_bytes())
+
+          with zipfile.ZipFile(zip_file, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+              for path in sorted(package_root.rglob("*")):
+                  if path.is_file():
+                      archive.write(path, path.as_posix())
+
+          print(f"Created {zip_file}")
+          print(f"Modules: {len(modules)}")
+          print(f"Specifications: {len(spec_packages)}")
+          print(f"Files: {len(files)}")
           PYTHON_SCRIPT
 
-          cp "$FOLDER_TREE_FILE" "$RELEASE_DIR/baseline-folder-tree-$VERSION.md"
+          echo "Created baseline files:"
+          ls -lh "$ZIP_FILE" "$MANIFEST_FILE" "$TREE_FILE" "$CHECKSUM_FILE" "$TAG_MESSAGE_FILE"
 
-          echo "Generated folder tree preview:"
-          cat "$FOLDER_TREE_FILE"
+      - name: Create and push annotated Git tag
+        if: steps.merge.outputs.create_baseline == 'true'
+        shell: bash
         env:
-          VERSION_VALUE: ${{ inputs.version }}
-          FOLDER_TREE_FILE_VALUE: HEMS/BASELINES/${{ inputs.version }}/baseline-folder-tree-${{ inputs.version }}.md
-
-      - name: Generate checksum file
-        shell: bash
+          PUSH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.merge.outputs.tag_name }}
+          MERGE_SHA: ${{ steps.merge.outputs.merge_sha }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.version }}"
-          BASELINE_DIR="HEMS/BASELINES/$VERSION"
-          CHECKSUM_FILE="$BASELINE_DIR/checksums.sha256"
-          RELEASE_DIR="baseline-selection-$VERSION"
+          BASIC_AUTH="$(printf 'x-access-token:%s' "$PUSH_TOKEN" | base64 | tr -d '\n')"
+          TAG_MESSAGE_FILE="tag-message-${TAG_NAME}.txt"
 
-          : > "$CHECKSUM_FILE"
+          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${BASIC_AUTH}"
 
-          while IFS= read -r file; do
-            sha256sum "$file" >> "$CHECKSUM_FILE"
-          done < selected-files.txt
+          cleanup_credentials() {
+            git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
+          }
+          trap cleanup_credentials EXIT
 
-          cp "$CHECKSUM_FILE" "$RELEASE_DIR/checksums-$VERSION.sha256"
+          git tag --annotate "$TAG_NAME" "$MERGE_SHA" --file "$TAG_MESSAGE_FILE"
+          git push origin "refs/tags/$TAG_NAME"
 
-          echo "Generated checksums:"
-          cat "$CHECKSUM_FILE"
+          cleanup_credentials
+          trap - EXIT
 
-      - name: Commit generated baseline metadata
+      - name: Create GitHub Release and attach baseline ZIP
+        if: steps.merge.outputs.create_baseline == 'true'
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_HOST: ${{ github.server_url }}
+          TAG_NAME: ${{ steps.merge.outputs.tag_name }}
         run: |
           set -euo pipefail
 
-          VERSION="${{ inputs.version }}"
+          GH_HOST="${GH_HOST#https://}"
+          GH_HOST="${GH_HOST#http://}"
 
-          git add HEMS
+          ZIP_FILE="merge-baseline-${TAG_NAME}.zip"
+          MANIFEST_FILE="baseline-manifest-${TAG_NAME}.yaml"
+          TREE_FILE="baseline-folder-tree-${TAG_NAME}.md"
+          CHECKSUM_FILE="checksums-${TAG_NAME}.sha256"
+          TAG_MESSAGE_FILE="tag-message-${TAG_NAME}.txt"
 
-          if git diff --cached --quiet; then
-            echo "No baseline metadata changes to commit."
-          else
-            git commit -m "Generate baseline metadata for $VERSION"
-            git push origin HEAD:${{ github.ref_name }}
+          if gh release view "$TAG_NAME" --hostname "$GH_HOST" >/dev/null 2>&1; then
+            echo "::error::A GitHub Release already exists for tag: $TAG_NAME"
+            exit 1
           fi
 
-      - name: Refresh after metadata push
-        shell: bash
-        run: |
-          set -euo pipefail
+          gh release create "$TAG_NAME" \
+            "$ZIP_FILE" \
+            "$MANIFEST_FILE" \
+            "$TREE_FILE" \
+            "$CHECKSUM_FILE" \
+            --hostname "$GH_HOST" \
+            --title "HEMS Merge Baseline: $TAG_NAME" \
+            --notes-file "$TAG_MESSAGE_FILE" \
+            --verify-tag
 
-          git fetch origin "${{ github.ref_name }}"
-          git reset --hard "origin/${{ github.ref_name }}"
-
-      - name: Create baseline ZIP package
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          VERSION="${{ inputs.version }}"
-          RELEASE_DIR="baseline-selection-$VERSION"
-          ZIP_FILE="baseline-$VERSION.zip"
-
-          zip -r "$ZIP_FILE" "$RELEASE_DIR"
-
-          echo "Created package:"
-          ls -lh "$ZIP_FILE"
-
-      - name: Create Git tag
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          VERSION="${{ inputs.version }}"
-
-          git tag "$VERSION"
-          git push origin "$VERSION"
-
-      - name: Prepare release notes
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          VERSION="${{ inputs.version }}"
-          DELIVERY_CYCLE="${{ inputs.delivery_cycle }}"
-          SCOPE="${{ inputs.release_scope }}"
-          SELECTED_PATH="${{ inputs.selected_path }}"
-
-          {
-            echo "# HEMS Baseline $VERSION"
-            echo ""
-            echo "## Delivery Cycle"
-            echo "$DELIVERY_CYCLE"
-            echo ""
-            echo "## Release Scope"
-            echo "$SCOPE"
-            echo ""
-            echo "## Selected Path"
-            echo "${SELECTED_PATH:-not_applicable}"
-            echo ""
-            echo "## Included Assets"
-            echo "- baseline-$VERSION.zip"
-            echo "- baseline-manifest-$VERSION.yaml"
-            echo "- checksums-$VERSION.sha256"
-            echo "- baseline-folder-tree-$VERSION.md"
-            echo ""
-            echo "## Folder Structure Preview"
-            echo ""
-            cat "HEMS/BASELINES/$VERSION/baseline-folder-tree-$VERSION.md"
-            echo ""
-            echo "## Generated By"
-            echo "GitHub Actions"
-          } > release-notes.md
-
-          cat release-notes.md
-
-      - name: Create GitHub Release and upload assets
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          VERSION="${{ inputs.version }}"
-
-          gh release create "$VERSION" \
-            "baseline-$VERSION.zip" \
-            "baseline-selection-$VERSION/baseline-manifest-$VERSION.yaml" \
-            "baseline-selection-$VERSION/checksums-$VERSION.sha256" \
-            "baseline-selection-$VERSION/baseline-folder-tree-$VERSION.md" \
-            --title "HEMS Baseline $VERSION" \
-            --notes-file release-notes.md
+          echo "Baseline release created successfully for tag: $TAG_NAME"
