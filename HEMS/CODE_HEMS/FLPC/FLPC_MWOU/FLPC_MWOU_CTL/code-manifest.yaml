@@ -3,11 +3,11 @@ type: code
 area: CODE_HEMS
 function: FLPC
 sub_function: FLPC_MWOU
-version: 2
+version: 3
 delivery_cycle: not_released
-commit: ffa441d7ed79df5b455dd31a48c4b53b07fda4f3
+commit: cfe9249537adf532caa1206102d83acba0db34fd
 generated_by: GitHub Actions
-generated_on: 2026-08-28T11:07:05Z
+generated_on: 2026-08-28T11:10:30Z
 structure_type: nested_generated_packages
 files:
   - a_FLPC_MWOU_CTL_adacxxx2xg_A_RI_16_0(1.0)/FLPC_MWOU_CTL_adacxxx2xg.c
@@ -24,11 +24,11 @@ files:
   - a_FLPC_MWOU_CTL_obmxxxx2xg_A_RI_16_0(1.0)/FLPC_MWOU_CTL_obmxxxx2xg_Memmap.h
 
 item_version:
-  version: 2
-  tag: item/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/v2
-  sha: ffa441d7ed79df5b455dd31a48c4b53b07fda4f3
-  pr: 22
-  updated_utc: "2026-08-28T11:07:05Z"
+  version: 3
+  tag: item/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/v3
+  sha: cfe9249537adf532caa1206102d83acba0db34fd
+  pr: 23
+  updated_utc: "2026-08-28T11:10:30Z"
 
 item_version_history:
   - version: 1
@@ -41,3 +41,8 @@ item_version_history:
     sha: ffa441d7ed79df5b455dd31a48c4b53b07fda4f3
     pr: 22
     updated_utc: "2026-08-28T11:07:05Z"
+  - version: 3
+    tag: item/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/v3
+    sha: cfe9249537adf532caa1206102d83acba0db34fd
+    pr: 23
+    updated_utc: "2026-08-28T11:10:30Z"
