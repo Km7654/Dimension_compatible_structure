@@ -167,14 +167,18 @@ jobs:
               SPEC_HEMS)
                 for variant in "${ALLOWED_VARIANTS[@]}"; do
                   expected="a_${module_name}_${variant}_A"
-                  [[ "$package_name" == "$expected" ]] && return 0
+                  if [[ "$package_name" == "$expected" ]]; then
+                    return 0
+                  fi
                 done
                 report_error "$package_path" "Invalid SPEC_HEMS package '$package_name'. Expected a_${module_name}_<allowed-variant>_A."
                 ;;
               CODE_HEMS)
                 for variant in "${ALLOWED_VARIANTS[@]}"; do
                   expected="a_${module_name}_${variant}_A_${RELEASE_SUFFIX}"
-                  [[ "$package_name" == "$expected" ]] && return 0
+                  if [[ "$package_name" == "$expected" ]]; then
+                    return 0
+                  fi
                 done
                 report_error "$package_path" "Invalid CODE_HEMS package '$package_name'. Expected a_${module_name}_<allowed-variant>_A_${RELEASE_SUFFIX}."
                 ;;
@@ -244,11 +248,18 @@ jobs:
                     report_error "$module_path" "MOD_HEMS module '$module_name' must contain exactly one package folder."
                   fi
                 done < <(find "$subfunction_path" -mindepth 1 -maxdepth 1 -type d | sort)
-                [[ "$module_count" -eq 0 ]] && report_error "$subfunction_path" "Sub-function '$subfunction_name' does not contain any module folders."
+                if [[ "$module_count" -eq 0 ]]; then
+                  report_error "$subfunction_path" "Sub-function '$subfunction_name' does not contain any module folders."
+                fi
               done < <(find "$function_path" -mindepth 1 -maxdepth 1 -type d | sort)
-              [[ "$subfunction_count" -eq 0 ]] && report_error "$function_path" "Function '$function_name' does not contain any sub-function folders."
+              if [[ "$subfunction_count" -eq 0 ]]; then
+                report_error "$function_path" "Function '$function_name' does not contain any sub-function folders."
+              fi
             done < <(find "$area_path" -mindepth 1 -maxdepth 1 -type d | sort)
-            [[ "$function_count" -eq 0 ]] && report_error "$area_path" "Area '$area_name' does not contain any function folders."
+            if [[ "$function_count" -eq 0 ]]; then
+              report_error "$area_path" "Area '$area_name' does not contain any function folders."
+            fi
+            return 0
           }
 
           [[ -d "$HEMS_ROOT" ]] || { echo "::error::HEMS root folder is missing."; exit 1; }
