@@ -1,0 +1,353 @@
+name: Auto Codebeamer PR and Merge
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: auto-codebeamer-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auto-codebeamer-pr:
+    name: Create and merge PR from tracker commit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify required runner tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for tool in git python3 gh base64; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "::error::Required runner tool is missing: $tool"
+              exit 1
+            fi
+          done
+
+      - name: Checkout pushed branch and main using Git
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          PUSH_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          REPOSITORY_URL="${SERVER_URL}/${REPOSITORY}.git"
+          AUTH_VALUE="$(printf 'x-access-token:%s' "$ACCESS_TOKEN" | base64 | tr -d '\n')"
+
+          git init -b "$BRANCH_NAME" .
+          git remote add origin "$REPOSITORY_URL"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH_VALUE}"
+
+          cleanup_auth() {
+            git config --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
+          }
+          trap cleanup_auth EXIT
+
+          git fetch --no-tags --prune origin \
+            "+refs/heads/main:refs/remotes/origin/main" \
+            "+refs/heads/${BRANCH_NAME}:refs/remotes/origin/${BRANCH_NAME}"
+
+          if ! git cat-file -e "${PUSH_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$PUSH_SHA"
+          fi
+
+          git checkout --force -B "$BRANCH_NAME" "$PUSH_SHA"
+          git clean -ffdx
+
+          cleanup_auth
+          trap - EXIT
+
+      - name: Detect tracker, changed code file, and next specification version
+        id: detect
+        shell: bash
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          python3 <<'PYTHON_SCRIPT'
+          import os
+          import re
+          import subprocess
+          from pathlib import Path
+
+          branch_name = os.environ["BRANCH_NAME"].strip()
+          github_output = Path(os.environ["GITHUB_OUTPUT"])
+
+          def git(*args, check=True):
+              result = subprocess.run(
+                  ["git", *args],
+                  text=True,
+                  stdout=subprocess.PIPE,
+                  stderr=subprocess.PIPE,
+              )
+              if check and result.returncode != 0:
+                  print(result.stdout)
+                  print(result.stderr)
+                  raise RuntimeError(f"Git command failed: git {' '.join(args)}")
+              return result.stdout.strip()
+
+          def output(name, value):
+              with github_output.open("a", encoding="utf-8") as handle:
+                  handle.write(f"{name}={value}\n")
+
+          latest_message = git("log", "-1", "--format=%B")
+          print(f"Branch: {branch_name}")
+          print("Latest commit message:")
+          print(latest_message)
+
+          tracker_match = re.search(r"(?<![A-Za-z0-9])#([0-9]{3,10})(?![0-9])", latest_message)
+          if not tracker_match:
+              print("No Codebeamer tracker ID found.")
+              print("Expected commit-message format example: #12345")
+              output("should_merge", "false")
+              raise SystemExit(0)
+
+          tracker_id = tracker_match.group(1)
+          changed_text = git(
+              "diff",
+              "--name-only",
+              "--diff-filter=ACMR",
+              "refs/remotes/origin/main...HEAD",
+          )
+          changed_files = sorted({line for line in changed_text.splitlines() if line})
+
+          print("Changed files against main:")
+          for changed_file in changed_files:
+              print(f"- {changed_file}")
+
+          code_files = []
+          for file_name in changed_files:
+              parts = file_name.split("/")
+              if (
+                  len(parts) >= 7
+                  and parts[0] == "HEMS"
+                  and parts[1] == "CODE_HEMS"
+                  and parts[-1].lower().endswith(".c")
+                  and Path(file_name).is_file()
+              ):
+                  code_files.append(file_name)
+
+          code_files = sorted(set(code_files))
+          if not code_files:
+              raise RuntimeError(
+                  "Tracker ID was found, but no changed CODE_HEMS .c file was found. "
+                  "Expected: HEMS/CODE_HEMS/<Function>/<Sub-function>/<Module>/<Package>/<File.c>"
+              )
+          if len(code_files) != 1:
+              print("Changed CODE_HEMS .c files:")
+              for code_file in code_files:
+                  print(f"- {code_file}")
+              raise RuntimeError(
+                  "Exactly one CODE_HEMS .c file is required per automatic Codebeamer merge."
+              )
+
+          code_file_path = code_files[0]
+          parts = code_file_path.split("/")
+          function_name = parts[2]
+          sub_function = parts[3]
+          module = parts[4]
+          package = parts[5]
+          package_folder = "/".join(parts[:6])
+          code_file_name = parts[-1]
+          specification_manifest = f"{package_folder}/specification-manifest.yaml"
+
+          manifest_text = ""
+          manifest_check = subprocess.run(
+              ["git", "cat-file", "-e", f"refs/remotes/origin/main:{specification_manifest}"],
+              stdout=subprocess.DEVNULL,
+              stderr=subprocess.DEVNULL,
+          )
+          if manifest_check.returncode == 0:
+              manifest_text = git(
+                  "show",
+                  f"refs/remotes/origin/main:{specification_manifest}",
+              )
+
+          version_match = re.search(r"^version:\s*['\"]?([0-9]+)['\"]?\s*$", manifest_text, re.MULTILINE)
+          if not version_match:
+              version_match = re.search(
+                  r"^item_version:\s*$.*?^\s+version:\s*['\"]?([0-9]+)['\"]?\s*$",
+                  manifest_text,
+                  re.MULTILINE | re.DOTALL,
+              )
+
+          current_version = int(version_match.group(1)) if version_match else 0
+          next_version = current_version + 1
+
+          # The main-only versioning workflow increments this package manifest
+          # after the PR is merged, so the merge subject uses the next version.
+          merge_subject = f"#{tracker_id} {code_file_name} {next_version}"
+
+          output("should_merge", "true")
+          output("tracker_id", tracker_id)
+          output("code_file_path", code_file_path)
+          output("code_file_name", code_file_name)
+          output("function", function_name)
+          output("sub_function", sub_function)
+          output("module", module)
+          output("package", package)
+          output("package_folder", package_folder)
+          output("specification_manifest", specification_manifest)
+          output("current_version", str(current_version))
+          output("next_version", str(next_version))
+          output("merge_subject", merge_subject)
+
+          print("============================================================")
+          print(f"Tracker ID: #{tracker_id}")
+          print(f"Code file: {code_file_name}")
+          print(f"Specification manifest on main: {specification_manifest}")
+          print(f"Current specification version: {current_version}")
+          print(f"Version after merge: {next_version}")
+          print(f"PR title and merge subject: {merge_subject}")
+          PYTHON_SCRIPT
+
+      - name: Create or update pull request
+        if: steps.detect.outputs.should_merge == 'true'
+        id: pr
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_HOST: ${{ github.server_url }}
+          GH_REPO: ${{ github.repository }}
+          BRANCH_NAME: ${{ github.ref_name }}
+          MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
+          TRACKER_ID: ${{ steps.detect.outputs.tracker_id }}
+          CODE_FILE_PATH: ${{ steps.detect.outputs.code_file_path }}
+          CODE_FILE_NAME: ${{ steps.detect.outputs.code_file_name }}
+          MODULE: ${{ steps.detect.outputs.module }}
+          PACKAGE: ${{ steps.detect.outputs.package }}
+          SPECIFICATION_MANIFEST: ${{ steps.detect.outputs.specification_manifest }}
+          CURRENT_VERSION: ${{ steps.detect.outputs.current_version }}
+          NEXT_VERSION: ${{ steps.detect.outputs.next_version }}
+        run: |
+          set -euo pipefail
+
+          GH_HOST="${GH_HOST#https://}"
+          GH_HOST="${GH_HOST#http://}"
+          export GH_HOST GH_REPO
+
+          PR_BODY_FILE="auto-codebeamer-pr-body.md"
+          {
+            echo "Automatic PR created from a branch commit containing a Codebeamer tracker ID."
+            echo ""
+            echo "Tracker: #${TRACKER_ID}"
+            echo "Code file: ${CODE_FILE_NAME}"
+            echo "Code file path: ${CODE_FILE_PATH}"
+            echo "Module: ${MODULE}"
+            echo "Package: ${PACKAGE}"
+            echo "Main-only specification manifest: ${SPECIFICATION_MANIFEST}"
+            echo "Current specification version on main: ${CURRENT_VERSION}"
+            echo "Expected specification version after merge: ${NEXT_VERSION}"
+            echo ""
+            echo "PR title and merge subject:"
+            echo "${MERGE_SUBJECT}"
+            echo ""
+            echo "The feature branch does not modify manifest files."
+            echo "The main-only baseline/versioning workflow updates the manifests after merge."
+          } > "$PR_BODY_FILE"
+
+          EXISTING_PR_NUMBER="$(
+            gh pr list \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --state open \
+              --json number \
+              --jq '.[0].number // empty'
+          )"
+
+          if [[ -n "$EXISTING_PR_NUMBER" ]]; then
+            PR_NUMBER="$EXISTING_PR_NUMBER"
+            echo "Updating existing PR #${PR_NUMBER}."
+            gh pr edit "$PR_NUMBER" \
+              --title "$MERGE_SUBJECT" \
+              --body-file "$PR_BODY_FILE"
+          else
+            echo "Creating PR from ${BRANCH_NAME} to main."
+            gh pr create \
+              --base main \
+              --head "$BRANCH_NAME" \
+              --title "$MERGE_SUBJECT" \
+              --body-file "$PR_BODY_FILE"
+
+            PR_NUMBER="$(
+              gh pr list \
+                --base main \
+                --head "$BRANCH_NAME" \
+                --state open \
+                --json number \
+                --jq '.[0].number // empty'
+            )"
+          fi
+
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "::error::Unable to determine the pull request number."
+            exit 1
+          fi
+
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "Using PR #${PR_NUMBER}."
+
+      - name: Merge pull request with generated message
+        if: steps.detect.outputs.should_merge == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_HOST: ${{ github.server_url }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ steps.pr.outputs.pr_number }}
+          BRANCH_SHA: ${{ github.sha }}
+          MERGE_SUBJECT: ${{ steps.detect.outputs.merge_subject }}
+          TRACKER_ID: ${{ steps.detect.outputs.tracker_id }}
+          CODE_FILE_PATH: ${{ steps.detect.outputs.code_file_path }}
+          CODE_FILE_NAME: ${{ steps.detect.outputs.code_file_name }}
+          MODULE: ${{ steps.detect.outputs.module }}
+          PACKAGE: ${{ steps.detect.outputs.package }}
+          SPECIFICATION_MANIFEST: ${{ steps.detect.outputs.specification_manifest }}
+          CURRENT_VERSION: ${{ steps.detect.outputs.current_version }}
+          NEXT_VERSION: ${{ steps.detect.outputs.next_version }}
+        run: |
+          set -euo pipefail
+
+          GH_HOST="${GH_HOST#https://}"
+          GH_HOST="${GH_HOST#http://}"
+          export GH_HOST GH_REPO
+
+          MERGE_BODY_FILE="auto-codebeamer-merge-body.md"
+          {
+            echo "Codebeamer tracker: #${TRACKER_ID}"
+            echo ""
+            echo "Code file: ${CODE_FILE_NAME}"
+            echo "Code file path: ${CODE_FILE_PATH}"
+            echo "Module: ${MODULE}"
+            echo "Package: ${PACKAGE}"
+            echo "Specification manifest: ${SPECIFICATION_MANIFEST}"
+            echo "Previous specification version: ${CURRENT_VERSION}"
+            echo "Specification version after merge: ${NEXT_VERSION}"
+            echo ""
+            echo "Automatic merge initiated because the latest branch commit contains #${TRACKER_ID}."
+          } > "$MERGE_BODY_FILE"
+
+          echo "Merging PR #${PR_NUMBER}."
+          echo "Merge subject: ${MERGE_SUBJECT}"
+
+          gh pr merge "$PR_NUMBER" \
+            --merge \
+            --subject "$MERGE_SUBJECT" \
+            --body-file "$MERGE_BODY_FILE" \
+            --match-head-commit "$BRANCH_SHA"
+
+          echo "Pull request merge completed or submitted according to repository rules."
