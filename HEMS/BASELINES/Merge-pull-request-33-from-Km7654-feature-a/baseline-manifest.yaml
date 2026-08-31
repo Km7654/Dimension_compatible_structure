@@ -1,0 +1,23 @@
+baseline_tag: "Merge-pull-request-33-from-Km7654-feature-a"
+repository: "Km7654/Dimension_compatible_structure"
+merge_commit: "f560158002c820e5641288dd4c34d3ec74183620"
+first_parent: "707d60538f9cb8ccb6c1be676d32c6407f3b495d"
+pull_request: "33"
+source_branch: "feature/a"
+target_branch: "main"
+generated_utc: "2026-08-31T07:23:42Z"
+merge_message: |
+  Merge pull request #33 from Km7654/feature/a
+  
+  updated code
+versions:
+  - component: "module/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL"
+    version: 5
+    manifest: "HEMS/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/code-manifest.yaml"
+  - component: "specification/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/obmxxxx1xg"
+    version: 1
+    manifest: "HEMS/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/a_ATSL_MWOU_CTL_obmxxxx1xg_A_RI_16_0(1.0)/specification-manifest.yaml"
+files:
+  - "HEMS/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/a_ATSL_MWOU_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ATSL_MWOU_CTL_obmxxxx1xg.c"
+  - "HEMS/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/a_ATSL_MWOU_CTL_obmxxxx1xg_A_RI_16_0(1.0)/specification-manifest.yaml"
+  - "HEMS/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/code-manifest.yaml"

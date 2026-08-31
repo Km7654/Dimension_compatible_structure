@@ -1,0 +1,28 @@
+HEMS consolidated merge baseline
+
+Original merge message:
+Merge pull request #33 from Km7654/feature/a
+
+updated code
+
+Repository: Km7654/Dimension_compatible_structure
+Pull request: #33
+Merge commit: f560158002c820e5641288dd4c34d3ec74183620
+
+Modules included:
+- ATSL_MWOU_CTL
+
+Specifications included:
+- obmxxxx1xg
+
+Versioned components:
+- module/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL = v5
+- specification/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/obmxxxx1xg = v1
+
+Files included:
+- HEMS/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/a_ATSL_MWOU_CTL_obmxxxx1xg_A_RI_16_0(1.0)/ATSL_MWOU_CTL_obmxxxx1xg.c
+- HEMS/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/a_ATSL_MWOU_CTL_obmxxxx1xg_A_RI_16_0(1.0)/specification-manifest.yaml
+- HEMS/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/code-manifest.yaml
+
+ZIP stored in repository: HEMS/BASELINES/Merge-pull-request-33-from-Km7654-feature-a/changed-files-Merge-pull-request-33-from-Km7654-feature-a.zip
+No GitHub Release was created. A user may create a Release manually from this tag.
