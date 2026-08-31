@@ -1,0 +1,28 @@
+HEMS consolidated merge baseline
+
+Original merge message:
+Merge pull request #34 from Km7654/feature/a
+
+Update FLPC_MWOU_CTL_adacxxx4xg.c
+
+Repository: Km7654/Dimension_compatible_structure
+Pull request: #34
+Merge commit: 8275047d10973f183536e07e28a702c11433fa6b
+
+Modules included:
+- FLPC_MWOU_CTL
+
+Specifications included:
+- adacxxx4xg
+
+Versioned components:
+- module/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL = v5
+- specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx4xg = v1
+
+Files included:
+- HEMS/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/a_FLPC_MWOU_CTL_adacxxx4xg_A_RI_16_0(1.0)/FLPC_MWOU_CTL_adacxxx4xg.c
+- HEMS/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/a_FLPC_MWOU_CTL_adacxxx4xg_A_RI_16_0(1.0)/specification-manifest.yaml
+- HEMS/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/code-manifest.yaml
+
+ZIP stored in repository: HEMS/BASELINES/Merge-pull-request-34-from-Km7654-feature-a/changed-files-Merge-pull-request-34-from-Km7654-feature-a.zip
+No GitHub Release was created. A user may create a Release manually from this tag.
