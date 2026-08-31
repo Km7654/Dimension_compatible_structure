@@ -1,4 +1,4 @@
-name: Consolidated HEMS Merge Versioning
+name: HEMS Module Baseline
 
 on:
   pull_request:
@@ -10,12 +10,12 @@ permissions:
   pull-requests: read
 
 concurrency:
-  group: consolidated-hems-versioning-main
+  group: hems-module-baseline-main
   cancel-in-progress: false
 
 jobs:
-  version-and-package:
-    name: Update manifests, create ZIP, and create one tag
+  create-module-baseline:
+    name: Version manifests, package modules, and create one tag
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
@@ -70,7 +70,7 @@ jobs:
           cleanup_auth
           trap - EXIT
 
-      - name: Update manifests and build consolidated baseline package
+      - name: Update manifests and create per-module baseline packages
         id: baseline
         shell: bash
         env:
@@ -100,20 +100,20 @@ jobs:
           target_branch = os.environ["TARGET_BRANCH"].strip()
           repository = os.environ["REPOSITORY"].strip()
           github_output = Path(os.environ["GITHUB_OUTPUT"])
-          updated_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+          generated_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-          module_manifest_by_area = {
+          MODULE_MANIFEST_BY_AREA = {
               "CODE_HEMS": "code-manifest.yaml",
               "MOD_HEMS": "module-manifest.yaml",
               "SPEC_HEMS": "spec-manifest.yaml",
           }
-          module_type_by_area = {
+          MODULE_TYPE_BY_AREA = {
               "CODE_HEMS": "code",
               "MOD_HEMS": "module",
               "SPEC_HEMS": "specification",
           }
-          specification_areas = {"CODE_HEMS", "SPEC_HEMS"}
-          generated_metadata = {
+          SPECIFICATION_AREAS = {"CODE_HEMS", "SPEC_HEMS"}
+          GENERATED_METADATA = {
               "code-manifest.yaml",
               "module-manifest.yaml",
               "spec-manifest.yaml",
@@ -123,9 +123,10 @@ jobs:
               ".keep",
           }
 
-          updated_manifests_path = Path("updated-manifests.txt")
-          changed_engineering_path = Path("changed-engineering-files.txt")
-          baseline_files_path = Path("baseline-files.txt")
+          UPDATED_MANIFESTS_FILE = Path("updated-manifests.txt")
+          BASELINE_FILES_FILE = Path("baseline-files.txt")
+          AFFECTED_MODULES_FILE = Path("affected-modules.txt")
+          TAG_DETAILS_WORK_FILE = Path("consolidated-tag-details.txt")
 
           def git(*args, check=True):
               result = subprocess.run(
@@ -144,9 +145,11 @@ jobs:
               value = str(value).replace("\\", "\\\\").replace('"', '\\"')
               return f'"{value}"'
 
-          def safe_component(value):
+          def safe_name(value):
               value = re.sub(r"[^A-Za-z0-9._-]+", "-", value)
               value = re.sub(r"-+", "-", value).strip(".-")
+              if value.endswith(".lock"):
+                  value = value[:-5]
               return value or "merge"
 
           def top_value(text, key):
@@ -179,11 +182,11 @@ jobs:
                       return value
               return ""
 
-          def existing_version(text):
+          def current_version(text):
               value = nested_value(text, "item_version", "version") or top_value(text, "version")
               return int(value) if value.isdigit() else 0
 
-          def existing_merge(text):
+          def current_merge(text):
               return nested_value(text, "item_version", "sha") or top_value(text, "commit")
 
           def parse_history(text):
@@ -216,7 +219,7 @@ jobs:
           def content_files(directory):
               files = []
               for path in directory.rglob("*"):
-                  if path.is_file() and path.name not in generated_metadata:
+                  if path.is_file() and path.name not in GENERATED_METADATA:
                       files.append(path.relative_to(directory).as_posix())
               return sorted(files)
 
@@ -227,17 +230,17 @@ jobs:
                   return package[len(prefix):-len(suffix)]
               return package
 
-          def render_manifest(path, identity, version, version_label, old_text):
+          def render_version_manifest(path, identity, version, version_label, old_text):
               history = [
-                  entry for entry in parse_history(old_text)
-                  if (entry.get("sha") or entry.get("commit")) != merge_sha
+                  record for record in parse_history(old_text)
+                  if (record.get("sha") or record.get("commit")) != merge_sha
               ]
               history.append({
                   "version": str(version),
-                  "tag": version_label,
+                  "label": version_label,
                   "sha": merge_sha,
                   "pr": pr_number,
-                  "updated_utc": updated_utc,
+                  "updated_utc": generated_utc,
               })
 
               lines = [f"{key}: {yaml_quote(value)}" for key, value in identity.items()]
@@ -247,7 +250,7 @@ jobs:
                   f"version_label: {yaml_quote(version_label)}",
                   f"commit: {yaml_quote(merge_sha)}",
                   f"pull_request: {yaml_quote(pr_number)}",
-                  f"updated_utc: {yaml_quote(updated_utc)}",
+                  f"updated_utc: {yaml_quote(generated_utc)}",
                   f"source_branch: {yaml_quote(source_branch)}",
                   f"target_branch: {yaml_quote(target_branch)}",
                   f"pull_request_title: {yaml_quote(pr_title)}",
@@ -264,7 +267,7 @@ jobs:
                   f"  label: {yaml_quote(version_label)}",
                   f"  sha: {yaml_quote(merge_sha)}",
                   f"  pr: {yaml_quote(pr_number)}",
-                  f"  updated_utc: {yaml_quote(updated_utc)}",
+                  f"  updated_utc: {yaml_quote(generated_utc)}",
                   "item_version_history:",
               ])
               for record in history:
@@ -278,31 +281,27 @@ jobs:
               return "\n".join(lines) + "\n"
 
           if not merge_sha or merge_sha == "0" * 40:
-              raise RuntimeError("Merge commit SHA is unavailable.")
+              raise RuntimeError("Pull-request merge commit SHA is unavailable.")
 
           parents_text, _ = git("rev-list", "--parents", "-n", "1", merge_sha)
           parents = parents_text.split()
           if len(parents) < 3:
               raise RuntimeError(
                   "Use the standard 'Create a merge commit' method. "
-                  "Squash and rebase merges are not supported by this workflow."
+                  "Squash and rebase merges are not supported."
               )
           first_parent = parents[1]
 
           merge_subject, _ = git("log", "-1", "--format=%s", merge_sha)
           merge_message, _ = git("log", "-1", "--format=%B", merge_sha)
+          tag_name = safe_name(merge_subject)[:120]
 
-          tag_name = safe_component(merge_subject)[:120]
-          if not tag_name:
-              tag_name = f"merge-{merge_sha[:12]}"
-
-          _, tag_exists = git(
+          _, tag_status = git(
               "show-ref", "--verify", "--quiet", f"refs/tags/{tag_name}", check=False
           )
-          if tag_exists == 0:
+          if tag_status == 0:
               raise RuntimeError(
-                  f"The consolidated tag already exists: {tag_name}. "
-                  "Use a unique merge message for each baseline."
+                  f"Tag already exists: {tag_name}. Use a unique merge subject."
               )
 
           changed_text, _ = git(
@@ -310,9 +309,10 @@ jobs:
           )
           changed_files = [line for line in changed_text.splitlines() if line]
 
-          changed_engineering_files = []
-          changed_modules = set()
+          changed_modules_by_area = set()
+          affected_modules = set()
           changed_specifications = set()
+          changed_engineering_files = []
 
           for file_name in changed_files:
               parts = file_name.split("/")
@@ -320,31 +320,32 @@ jobs:
                   continue
 
               area, function_name, sub_function, module = parts[1:5]
-              if area not in module_manifest_by_area:
+              if area not in MODULE_MANIFEST_BY_AREA:
                   continue
-              if Path(file_name).name in generated_metadata:
-                  print(f"Ignoring generated metadata change: {file_name}")
+              if Path(file_name).name in GENERATED_METADATA:
+                  print(f"Ignoring generated metadata: {file_name}")
                   continue
               if not Path(file_name).is_file():
                   continue
 
               changed_engineering_files.append(file_name)
-              changed_modules.add((area, function_name, sub_function, module))
+              changed_modules_by_area.add((area, function_name, sub_function, module))
+              affected_modules.add((function_name, sub_function, module))
 
-              if area in specification_areas and len(parts) >= 7:
+              if area in SPECIFICATION_AREAS and len(parts) >= 7:
                   changed_specifications.add(
                       (area, function_name, sub_function, module, parts[5])
                   )
 
           changed_engineering_files = sorted(set(changed_engineering_files))
 
-          if not changed_engineering_files:
-              updated_manifests_path.write_text("", encoding="utf-8")
-              changed_engineering_path.write_text("", encoding="utf-8")
-              baseline_files_path.write_text("", encoding="utf-8")
+          if not affected_modules:
+              UPDATED_MANIFESTS_FILE.write_text("", encoding="utf-8")
+              BASELINE_FILES_FILE.write_text("", encoding="utf-8")
+              AFFECTED_MODULES_FILE.write_text("", encoding="utf-8")
               with github_output.open("a", encoding="utf-8") as output:
                   output.write("changes_created=false\n")
-              print("No changed HEMS engineering files were found.")
+              print("No applicable HEMS engineering-content changes were detected.")
               raise SystemExit(0)
 
           updated_manifests = []
@@ -352,28 +353,28 @@ jobs:
 
           def update_manifest(path, identity, logical_name):
               old_text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
-              if existing_merge(old_text) == merge_sha:
+              if current_merge(old_text) == merge_sha:
                   print(f"Already processed for this merge: {path}")
                   return
 
-              version = existing_version(old_text) + 1
+              version = current_version(old_text) + 1
               version_label = f"{logical_name}/v{version}"
               path.parent.mkdir(parents=True, exist_ok=True)
               path.write_text(
-                  render_manifest(path, identity, version, version_label, old_text),
+                  render_version_manifest(path, identity, version, version_label, old_text),
                   encoding="utf-8",
               )
               updated_manifests.append(path.as_posix())
               version_summary.append((logical_name, version, path.as_posix()))
               print(f"Updated {path} to version {version}")
 
-          for area, function_name, sub_function, module in sorted(changed_modules):
-              directory = Path("HEMS") / area / function_name / sub_function / module
-              manifest_path = directory / module_manifest_by_area[area]
+          for area, function_name, sub_function, module in sorted(changed_modules_by_area):
+              module_dir = Path("HEMS") / area / function_name / sub_function / module
+              manifest_path = module_dir / MODULE_MANIFEST_BY_AREA[area]
               identity = {
                   "manifest_level": "module",
                   "module": module,
-                  "type": module_type_by_area[area],
+                  "type": MODULE_TYPE_BY_AREA[area],
                   "area": area,
                   "function": function_name,
                   "sub_function": sub_function,
@@ -384,15 +385,13 @@ jobs:
               update_manifest(manifest_path, identity, logical_name)
 
           for area, function_name, sub_function, module, package in sorted(changed_specifications):
-              directory = (
-                  Path("HEMS") / area / function_name / sub_function / module / package
-              )
-              if not directory.is_dir():
-                  print(f"Skipping missing package directory: {directory}")
+              package_dir = Path("HEMS") / area / function_name / sub_function / module / package
+              if not package_dir.is_dir():
+                  print(f"Skipping missing package: {package_dir}")
                   continue
 
               specification = extract_specification(area, module, package)
-              manifest_path = directory / "specification-manifest.yaml"
+              manifest_path = package_dir / "specification-manifest.yaml"
               identity = {
                   "manifest_level": "specification",
                   "specification": specification,
@@ -413,67 +412,125 @@ jobs:
               ])
               update_manifest(manifest_path, identity, logical_name)
 
-          baseline_dir = Path("HEMS") / "BASELINES" / tag_name
-          baseline_dir.mkdir(parents=True, exist_ok=True)
-          package_root = Path(f"baseline-content-{tag_name}")
-          shutil.rmtree(package_root, ignore_errors=True)
-          package_root.mkdir(parents=True)
+          baseline_files = []
+          module_package_records = []
 
-          all_package_files = sorted(set(changed_engineering_files + updated_manifests))
-          for relative_name in all_package_files:
-              source = Path(relative_name)
-              if not source.is_file():
-                  raise RuntimeError(f"Baseline source file is missing: {source}")
-              destination = package_root / source
-              destination.parent.mkdir(parents=True, exist_ok=True)
-              shutil.copy2(source, destination)
+          for function_name, sub_function, module in sorted(affected_modules):
+              baseline_dir = (
+                  Path("HEMS") / "BASELINES" / function_name /
+                  sub_function / module / tag_name
+              )
+              baseline_dir.mkdir(parents=True, exist_ok=True)
 
-          checksums = []
-          for relative_name in all_package_files:
-              path = Path(relative_name)
-              digest = hashlib.sha256(path.read_bytes()).hexdigest()
-              checksums.append(f"{digest}  {relative_name}")
+              staging_dir = Path("module-package-staging") / function_name / sub_function / module
+              shutil.rmtree(staging_dir, ignore_errors=True)
+              staging_dir.mkdir(parents=True, exist_ok=True)
 
-          manifest_lines = [
-              f"baseline_tag: {yaml_quote(tag_name)}",
-              f"repository: {yaml_quote(repository)}",
-              f"merge_commit: {yaml_quote(merge_sha)}",
-              f"first_parent: {yaml_quote(first_parent)}",
-              f"pull_request: {yaml_quote(pr_number)}",
-              f"source_branch: {yaml_quote(source_branch)}",
-              f"target_branch: {yaml_quote(target_branch)}",
-              f"generated_utc: {yaml_quote(updated_utc)}",
-              "merge_message: |",
-          ]
-          manifest_lines.extend(f"  {line}" for line in merge_message.splitlines())
-          manifest_lines.append("versions:")
-          for logical_name, version, manifest_path in version_summary:
-              manifest_lines.extend([
-                  f"  - component: {yaml_quote(logical_name)}",
-                  f"    version: {version}",
-                  f"    manifest: {yaml_quote(manifest_path)}",
+              included_files = []
+              for area in ("CODE_HEMS", "MOD_HEMS", "SPEC_HEMS"):
+                  module_source = Path("HEMS") / area / function_name / sub_function / module
+                  if not module_source.is_dir():
+                      continue
+
+                  module_destination = staging_dir / "HEMS" / area / function_name / sub_function / module
+                  shutil.copytree(module_source, module_destination, dirs_exist_ok=True)
+                  included_files.extend(
+                      path.as_posix()
+                      for path in sorted(module_source.rglob("*"))
+                      if path.is_file()
+                  )
+
+              if not included_files:
+                  raise RuntimeError(
+                      f"No module content found for {function_name}/{sub_function}/{module}"
+                  )
+
+              module_zip = baseline_dir / f"{module}-{tag_name}.zip"
+              module_manifest = baseline_dir / "baseline-manifest.yaml"
+              module_checksums = baseline_dir / "checksums.sha256"
+              module_details = baseline_dir / "tag-details.txt"
+
+              checksum_lines = []
+              for file_name in included_files:
+                  digest = hashlib.sha256(Path(file_name).read_bytes()).hexdigest()
+                  checksum_lines.append(f"{digest}  {file_name}")
+
+              relevant_versions = [
+                  record for record in version_summary
+                  if f"/{function_name}/{sub_function}/{module}" in record[0]
+              ]
+
+              manifest_lines = [
+                  f"baseline_tag: {yaml_quote(tag_name)}",
+                  f"repository: {yaml_quote(repository)}",
+                  f"function: {yaml_quote(function_name)}",
+                  f"sub_function: {yaml_quote(sub_function)}",
+                  f"module: {yaml_quote(module)}",
+                  f"pull_request: {yaml_quote(pr_number)}",
+                  f"merge_commit: {yaml_quote(merge_sha)}",
+                  f"generated_utc: {yaml_quote(generated_utc)}",
+                  "versions:",
+              ]
+              for logical_name, version, manifest_path in relevant_versions:
+                  manifest_lines.extend([
+                      f"  - component: {yaml_quote(logical_name)}",
+                      f"    version: {version}",
+                      f"    manifest: {yaml_quote(manifest_path)}",
+                  ])
+              if not relevant_versions:
+                  manifest_lines.append("  []")
+              manifest_lines.append("included_files:")
+              manifest_lines.extend(f"  - {yaml_quote(item)}" for item in included_files)
+
+              module_manifest.write_text(
+                  "\n".join(manifest_lines) + "\n", encoding="utf-8"
+              )
+              module_checksums.write_text(
+                  "\n".join(checksum_lines) + "\n", encoding="utf-8"
+              )
+              module_details.write_text(
+                  "\n".join([
+                      "HEMS module baseline",
+                      "",
+                      f"Tag: {tag_name}",
+                      f"Function: {function_name}",
+                      f"Sub-function: {sub_function}",
+                      f"Module: {module}",
+                      f"Pull request: #{pr_number}",
+                      f"Merge commit: {merge_sha}",
+                      "",
+                      "Original merge message:",
+                      merge_message,
+                      "",
+                      f"Downloadable module ZIP: {module_zip.as_posix()}",
+                  ]) + "\n",
+                  encoding="utf-8",
+              )
+
+              for metadata in (module_manifest, module_checksums, module_details):
+                  destination = staging_dir / metadata.name
+                  shutil.copy2(metadata, destination)
+
+              with zipfile.ZipFile(module_zip, "w", zipfile.ZIP_DEFLATED) as archive:
+                  for path in sorted(staging_dir.rglob("*")):
+                      if path.is_file():
+                          archive.write(path, path.relative_to(staging_dir).as_posix())
+
+              baseline_files.extend([
+                  module_manifest.as_posix(),
+                  module_checksums.as_posix(),
+                  module_details.as_posix(),
+                  module_zip.as_posix(),
               ])
-          manifest_lines.append("files:")
-          manifest_lines.extend(f"  - {yaml_quote(item)}" for item in all_package_files)
+              module_package_records.append((
+                  function_name,
+                  sub_function,
+                  module,
+                  module_zip.as_posix(),
+              ))
 
-          baseline_manifest = baseline_dir / "baseline-manifest.yaml"
-          baseline_checksums = baseline_dir / "checksums.sha256"
-          baseline_notes = baseline_dir / "tag-details.txt"
-          baseline_zip = baseline_dir / f"changed-files-{tag_name}.zip"
-
-          baseline_manifest.write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
-          baseline_checksums.write_text("\n".join(checksums) + "\n", encoding="utf-8")
-
-          def details_section(title, values):
-              return [title] + ([f"- {value}" for value in values] or ["- None"])
-
-          modules = sorted({item[3] for item in changed_modules})
-          specifications = sorted({
-              extract_specification(item[0], item[3], item[4])
-              for item in changed_specifications
-          })
-          tag_details = [
-              "HEMS consolidated merge baseline",
+          consolidated_details = [
+              "HEMS consolidated module baseline",
               "",
               "Original merge message:",
               merge_message,
@@ -482,48 +539,35 @@ jobs:
               f"Pull request: #{pr_number}",
               f"Merge commit: {merge_sha}",
               "",
-              *details_section("Modules included:", modules),
-              "",
-              *details_section("Specifications included:", specifications),
-              "",
-              *details_section(
-                  "Versioned components:",
-                  [f"{name} = v{version}" for name, version, _ in version_summary],
-              ),
-              "",
-              *details_section("Files included:", all_package_files),
-              "",
-              f"ZIP stored in repository: {baseline_zip.as_posix()}",
-              "No GitHub Release was created. A user may create a Release manually from this tag.",
+              "Affected modules and downloadable ZIP paths:",
           ]
-          baseline_notes.write_text("\n".join(tag_details) + "\n", encoding="utf-8")
+          for function_name, sub_function, module, zip_path in module_package_records:
+              consolidated_details.extend([
+                  f"- {function_name}/{sub_function}/{module}",
+                  f"  ZIP: {zip_path}",
+              ])
+          consolidated_details.extend([
+              "",
+              "One consolidated Git tag was created for this merged PR.",
+              "No GitHub Release was created automatically.",
+              "To show a module ZIP directly under Assets, create a Release manually from this tag and upload the required ZIP.",
+          ])
+          TAG_DETAILS_WORK_FILE.write_text(
+              "\n".join(consolidated_details) + "\n", encoding="utf-8"
+          )
 
-          for metadata in (baseline_manifest, baseline_checksums, baseline_notes):
-              destination = package_root / metadata
-              destination.parent.mkdir(parents=True, exist_ok=True)
-              shutil.copy2(metadata, destination)
-
-          with zipfile.ZipFile(baseline_zip, "w", zipfile.ZIP_DEFLATED) as archive:
-              for path in sorted(package_root.rglob("*")):
-                  if path.is_file():
-                      archive.write(path, path.as_posix())
-
-          updated_manifests_path.write_text(
-              "\n".join(updated_manifests) + "\n",
+          UPDATED_MANIFESTS_FILE.write_text(
+              "\n".join(updated_manifests) + ("\n" if updated_manifests else ""),
               encoding="utf-8",
           )
-          changed_engineering_path.write_text(
-              "\n".join(changed_engineering_files) + "\n",
-              encoding="utf-8",
-          )
-          baseline_files = [
-              baseline_manifest.as_posix(),
-              baseline_checksums.as_posix(),
-              baseline_notes.as_posix(),
-              baseline_zip.as_posix(),
-          ]
-          baseline_files_path.write_text(
+          BASELINE_FILES_FILE.write_text(
               "\n".join(baseline_files) + "\n",
+              encoding="utf-8",
+          )
+          AFFECTED_MODULES_FILE.write_text(
+              "\n".join(
+                  "/".join(module_key) for module_key in sorted(affected_modules)
+              ) + "\n",
               encoding="utf-8",
           )
 
@@ -533,33 +577,33 @@ jobs:
               output.write(f"merge_sha={merge_sha}\n")
 
           print("============================================================")
-          print(f"Consolidated tag: {tag_name}")
-          print(f"Changed engineering files: {len(changed_engineering_files)}")
+          print(f"Tag: {tag_name}")
+          print(f"Affected modules: {len(affected_modules)}")
           print(f"Updated manifests: {len(updated_manifests)}")
-          print(f"Versioned components: {len(version_summary)}")
-          print(f"ZIP: {baseline_zip}")
-          print("No module/specification tags were created.")
-          print("No GitHub Release will be created.")
+          print(f"Module ZIP files: {len(module_package_records)}")
+          for _, _, module, zip_path in module_package_records:
+              print(f"- {module}: {zip_path}")
+          print("No GitHub Release was created.")
           PYTHON_SCRIPT
 
-      - name: Review generated manifests and baseline package
+      - name: Review generated manifests and module baselines
         if: steps.baseline.outputs.changes_created == 'true'
         shell: bash
         run: |
           set -euo pipefail
 
+          echo "Affected modules:"
+          cat affected-modules.txt
+          echo ""
           echo "Updated manifests:"
           cat updated-manifests.txt
           echo ""
-          echo "Changed engineering files:"
-          cat changed-engineering-files.txt
-          echo ""
-          echo "Baseline files committed to main:"
+          echo "Generated baseline files:"
           cat baseline-files.txt
           echo ""
           git diff -- HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS HEMS/BASELINES
 
-      - name: Commit manifests and ZIP to main
+      - name: Commit manifests and per-module ZIP files to main
         if: steps.baseline.outputs.changes_created == 'true'
         shell: bash
         env:
@@ -571,34 +615,25 @@ jobs:
         run: |
           set -euo pipefail
 
-          while IFS= read -r file; do
-            if [[ -z "$file" ]]; then
-              continue
-            fi
-            if [[ ! -f "$file" ]]; then
-              echo "::error::Generated file is missing: $file"
-              exit 1
-            fi
-            git add -- "$file"
-          done < updated-manifests.txt
-
-          while IFS= read -r file; do
-            if [[ -z "$file" ]]; then
-              continue
-            fi
-            if [[ ! -f "$file" ]]; then
-              echo "::error::Baseline file is missing: $file"
-              exit 1
-            fi
-            git add -- "$file"
-          done < baseline-files.txt
+          for list_file in updated-manifests.txt baseline-files.txt; do
+            while IFS= read -r generated_file; do
+              if [[ -z "$generated_file" ]]; then
+                continue
+              fi
+              if [[ ! -f "$generated_file" ]]; then
+                echo "::error::Generated file is missing: $generated_file"
+                exit 1
+              fi
+              git add -- "$generated_file"
+            done < "$list_file"
+          done
 
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
             exit 0
           fi
 
-          git commit -m "Create consolidated HEMS baseline ${TAG_NAME} after PR #${PR_NUMBER}"
+          git commit -m "Create module baselines ${TAG_NAME} after PR #${PR_NUMBER}"
 
           AUTH_VALUE="$(printf 'x-access-token:%s' "$ACCESS_TOKEN" | base64 | tr -d '\n')"
           git config http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH_VALUE}"
@@ -610,7 +645,7 @@ jobs:
 
           git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
           if [[ "$(git rev-parse refs/remotes/origin/main)" != "$MERGE_SHA" ]]; then
-            echo "::error::main changed after this PR merge. Reconcile latest main before retrying."
+            echo "::error::main changed after this PR merge. Reconcile the latest main branch and retry."
             exit 1
           fi
 
@@ -619,7 +654,7 @@ jobs:
           cleanup_auth
           trap - EXIT
 
-      - name: Create and push exactly one annotated tag
+      - name: Create and push exactly one consolidated annotated tag
         if: steps.baseline.outputs.changes_created == 'true'
         shell: bash
         env:
@@ -630,10 +665,9 @@ jobs:
           set -euo pipefail
 
           TAG_TARGET="$(git rev-parse HEAD)"
-          TAG_DETAILS="HEMS/BASELINES/${TAG_NAME}/tag-details.txt"
 
-          if [[ ! -f "$TAG_DETAILS" ]]; then
-            echo "::error::Tag details file is missing: $TAG_DETAILS"
+          if [[ ! -f consolidated-tag-details.txt ]]; then
+            echo "::error::Consolidated tag details file is missing."
             exit 1
           fi
 
@@ -642,7 +676,8 @@ jobs:
             exit 1
           fi
 
-          git tag --annotate "$TAG_NAME" "$TAG_TARGET" --file "$TAG_DETAILS"
+          git tag --annotate "$TAG_NAME" "$TAG_TARGET" \
+            --file consolidated-tag-details.txt
 
           AUTH_VALUE="$(printf 'x-access-token:%s' "$ACCESS_TOKEN" | base64 | tr -d '\n')"
           git config http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH_VALUE}"
@@ -657,8 +692,8 @@ jobs:
           cleanup_auth
           trap - EXIT
 
-          echo "Created exactly one consolidated tag: $TAG_NAME"
-          echo "No separate MOD_HEMS, SPEC_HEMS, CODE_HEMS, module, or specification tags were created."
+          echo "Created exactly one tag: $TAG_NAME"
+          echo "The tag points to the commit containing all per-module ZIP files."
           echo "No GitHub Release was created."
 
       - name: Summary
@@ -667,10 +702,16 @@ jobs:
           set -euo pipefail
 
           if [[ "${{ steps.baseline.outputs.changes_created }}" == "true" ]]; then
-            echo "Consolidated HEMS versioning completed."
+            echo "HEMS module baseline generation completed."
             echo "Tag: ${{ steps.baseline.outputs.tag_name }}"
-            echo "ZIP: HEMS/BASELINES/${{ steps.baseline.outputs.tag_name }}/changed-files-${{ steps.baseline.outputs.tag_name }}.zip"
-            echo "A Release was not created. Create a Release manually from the tag if required."
+            echo ""
+            echo "Affected modules:"
+            cat affected-modules.txt
+            echo ""
+            echo "Module ZIP files are stored under:"
+            echo "HEMS/BASELINES/<Function>/<Sub-function>/<Module>/${{ steps.baseline.outputs.tag_name }}/"
+            echo ""
+            echo "No Release was created. A user can create a Release manually and upload the desired module ZIP."
           else
             echo "No applicable HEMS engineering files changed."
           fi
