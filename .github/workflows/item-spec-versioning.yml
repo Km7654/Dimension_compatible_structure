@@ -1,4 +1,4 @@
-name: Item Specification Versioning
+name: Item, Module, and Specification Versioning
 
 on:
   pull_request:
@@ -11,40 +11,76 @@ permissions:
   contents: write
   pull-requests: read
 
+concurrency:
+  group: module-specification-versioning-main
+  cancel-in-progress: false
+
 jobs:
-  item-spec-versioning:
-    name: Update changed HEMS item versions
+  versioning:
+    name: Update main-only module and specification manifests
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
-    if: github.event.pull_request.merged == true
-
     steps:
-      - name: Checkout main branch
-        uses: actions/checkout@v4
-        with:
-          ref: main
-          fetch-depth: 0
-          token: ${{ github.token }}
-
-      - name: Configure Git user
+      - name: Verify required runner tools
         shell: bash
         run: |
           set -euo pipefail
 
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          for tool in git python3 base64; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "::error::Required runner tool is missing: $tool"
+              exit 1
+            fi
+          done
 
-      - name: Update changed item versions
+      - name: Checkout latest main using Git
+        shell: bash
+        env:
+          ACCESS_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+
+          REPOSITORY_URL="${SERVER_URL}/${REPOSITORY}.git"
+          AUTH_VALUE="$(printf 'x-access-token:%s' "$ACCESS_TOKEN" | base64 | tr -d '\n')"
+
+          git init -b main .
+          git remote add origin "$REPOSITORY_URL"
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH_VALUE}"
+
+          cleanup_auth() {
+            git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
+          }
+          trap cleanup_auth EXIT
+
+          git fetch --no-tags --prune origin \
+            "+refs/heads/main:refs/remotes/origin/main"
+          git checkout --force -B main refs/remotes/origin/main
+          git clean -ffdx
+
+          if ! git cat-file -e "${MERGE_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags origin "$MERGE_SHA"
+          fi
+
+          cleanup_auth
+          trap - EXIT
+
+      - name: Update module and specification versions
         id: versioning
         shell: bash
         env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
           MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_TITLE: ${{ github.event.pull_request.title }}
           SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
           TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
           REPOSITORY: ${{ github.repository }}
+          GITHUB_OUTPUT_FILE: ${{ github.output }}
         run: |
           set -euo pipefail
 
@@ -55,906 +91,463 @@ jobs:
           from datetime import datetime, timezone
           from pathlib import Path
 
-
-          base_sha = os.environ["BASE_SHA"].strip()
           merge_sha = os.environ["MERGE_SHA"].strip()
           pr_number = os.environ["PR_NUMBER"].strip()
           pr_title = os.environ["PR_TITLE"].strip()
           source_branch = os.environ["SOURCE_BRANCH"].strip()
           target_branch = os.environ["TARGET_BRANCH"].strip()
           repository = os.environ["REPOSITORY"].strip()
+          github_output = Path(os.environ["GITHUB_OUTPUT"])
+          updated_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
-          updated_utc = datetime.now(timezone.utc).strftime(
-              "%Y-%m-%dT%H:%M:%SZ"
-          )
-
-
-          MANIFEST_BY_AREA = {
+          ZERO_SHA = "0" * 40
+          CONTROLLED_AREAS = {"CODE_HEMS", "MOD_HEMS", "SPEC_HEMS"}
+          MODULE_MANIFEST_BY_AREA = {
               "CODE_HEMS": "code-manifest.yaml",
               "MOD_HEMS": "module-manifest.yaml",
               "SPEC_HEMS": "spec-manifest.yaml",
           }
-
-          MANIFEST_TYPE_BY_AREA = {
+          MODULE_TYPE_BY_AREA = {
               "CODE_HEMS": "code",
               "MOD_HEMS": "module",
               "SPEC_HEMS": "specification",
           }
-
-          IGNORED_FILE_NAMES = {
+          SPECIFICATION_AREAS = {"CODE_HEMS", "SPEC_HEMS"}
+          SPECIFICATION_MANIFEST = "specification-manifest.yaml"
+          GENERATED_MANIFEST_NAMES = {
               "code-manifest.yaml",
               "module-manifest.yaml",
               "spec-manifest.yaml",
+              "specification-manifest.yaml",
               "component-manifest.yaml",
+          }
+          IGNORED_METADATA_NAMES = GENERATED_MANIFEST_NAMES | {
               "trace_links.csv",
               ".keep",
           }
 
-          IGNORED_PREFIXES = (
-              "HEMS/BASELINES/",
-              "HEMS/INCOMING/",
-              "HEMS/DELIVERY_REQUESTS/",
-          )
+          updated_manifests_file = Path("updated-manifests.txt")
+          created_tags_file = Path("created-version-tags.txt")
 
-          ZERO_SHA = "0000000000000000000000000000000000000000"
-
-          UPDATED_MANIFESTS_FILE = Path("updated-item-manifests.txt")
-          CREATED_TAGS_FILE = Path("created-item-tags.txt")
-
-
-          def run_git(command, allow_failure=False):
+          def git(*args, allow_failure=False):
               result = subprocess.run(
-                  command,
-                  text=True,
-                  stdout=subprocess.PIPE,
-                  stderr=subprocess.PIPE,
+                  ["git", *args], text=True,
+                  stdout=subprocess.PIPE, stderr=subprocess.PIPE,
               )
-
               if result.returncode != 0 and not allow_failure:
                   print(result.stdout)
                   print(result.stderr)
-                  raise subprocess.CalledProcessError(
-                      result.returncode,
-                      command,
-                      output=result.stdout,
-                      stderr=result.stderr,
-                  )
-
+                  raise RuntimeError(f"Git command failed: git {' '.join(args)}")
               return result.stdout.strip()
 
-
-          def safe_tag_component(value):
-              return re.sub(r"[^A-Za-z0-9._-]+", "_", value)
-
-
           def yaml_quote(value):
-              escaped_value = str(value).replace("\\", "\\\\")
-              escaped_value = escaped_value.replace('"', '\\"')
-              return f'"{escaped_value}"'
+              value = str(value).replace("\\", "\\\\").replace('"', '\\"')
+              return f'"{value}"'
 
+          def safe_tag(value):
+              value = re.sub(r"[^A-Za-z0-9._-]+", "_", value)
+              return value.strip("._-") or "unnamed"
 
-          def get_top_level_value(manifest_text, field_name):
-              pattern = re.compile(
-                  rf"^{re.escape(field_name)}:[ \t]*(.*?)[ \t]*$",
-                  re.MULTILINE,
+          def read_manifest(path):
+              if not path.is_file():
+                  return ""
+              return path.read_text(encoding="utf-8", errors="replace")
+
+          def scalar(text, key):
+              match = re.search(
+                  rf"^{re.escape(key)}:[ \t]*(.*?)[ \t]*$",
+                  text, re.MULTILINE,
               )
-
-              match = pattern.search(manifest_text)
-
               if not match:
                   return ""
-
               value = match.group(1).strip()
-
-              if (
-                  len(value) >= 2
-                  and value[0] == value[-1]
-                  and value[0] in {"'", '"'}
-              ):
+              if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
                   value = value[1:-1]
+              return value
 
-              return value.strip()
-
-
-          def set_top_level_value(manifest_text, field_name, value):
-              replacement = f"{field_name}: {value}"
-
-              pattern = re.compile(
-                  rf"^{re.escape(field_name)}:[^\r\n]*$",
-                  re.MULTILINE,
-              )
-
-              if pattern.search(manifest_text):
-                  return pattern.sub(
-                      lambda _: replacement,
-                      manifest_text,
-                      count=1,
-                  )
-
-              lines = manifest_text.splitlines()
-
-              insert_after_fields = {
-                  "module",
-                  "type",
-                  "area",
-                  "function",
-                  "sub_function",
-              }
-
-              insert_index = 0
-
-              for index, line in enumerate(lines):
-                  if not line or line.startswith((" ", "\t")):
-                      continue
-
-                  field = line.split(":", 1)[0].strip()
-
-                  if field in insert_after_fields:
-                      insert_index = index + 1
-
-              lines.insert(insert_index, replacement)
-
-              return "\n".join(lines) + "\n"
-
-
-          def extract_top_level_section(manifest_text, section_name):
-              lines = manifest_text.splitlines()
-              section_start = None
-
-              for index, line in enumerate(lines):
-                  if line.strip() == f"{section_name}:" and not line.startswith(
-                      (" ", "\t")
-                  ):
-                      section_start = index + 1
-                      break
-
-              if section_start is None:
-                  return []
-
-              section_lines = []
-
-              for line in lines[section_start:]:
+          def nested_scalar(text, section, key):
+              lines = text.splitlines()
+              try:
+                  start = lines.index(f"{section}:") + 1
+              except ValueError:
+                  return ""
+              for line in lines[start:]:
                   if line and not line.startswith((" ", "\t")):
                       break
-
-                  section_lines.append(line)
-
-              return section_lines
-
-
-          def parse_existing_item_version(manifest_text):
-              section_lines = extract_top_level_section(
-                  manifest_text,
-                  "item_version",
-              )
-
-              version_data = {}
-
-              for line in section_lines:
-                  match = re.match(
-                      r"^[ \t]+([A-Za-z0-9_]+):[ \t]*(.*?)[ \t]*$",
-                      line,
-                  )
-
-                  if not match:
-                      continue
-
-                  key = match.group(1).strip()
-                  value = match.group(2).strip()
-
-                  if (
-                      len(value) >= 2
-                      and value[0] == value[-1]
-                      and value[0] in {"'", '"'}
-                  ):
-                      value = value[1:-1]
-
-                  version_data[key] = value
-
-              return version_data
-
-
-          def remove_generated_version_sections(manifest_text):
-              generated_sections = {
-                  "item_version",
-                  "item_version_history",
-              }
-
-              lines = manifest_text.splitlines()
-              retained_lines = []
-
-              index = 0
-
-              while index < len(lines):
-                  current_line = lines[index]
-
-                  if current_line and not current_line.startswith(
-                      (" ", "\t")
-                  ):
-                      field_name = current_line.split(":", 1)[0].strip()
-
-                      if (
-                          field_name in generated_sections
-                          and current_line.strip()
-                          == f"{field_name}:"
-                      ):
-                          index += 1
-
-                          while index < len(lines):
-                              following_line = lines[index]
-
-                              if (
-                                  following_line
-                                  and not following_line.startswith(
-                                      (" ", "\t")
-                                  )
-                              ):
-                                  break
-
-                              index += 1
-
-                          continue
-
-                  retained_lines.append(current_line)
-                  index += 1
-
-              return "\n".join(retained_lines).rstrip() + "\n"
-
-
-          def parse_existing_history(manifest_text):
-              section_lines = extract_top_level_section(
-                  manifest_text,
-                  "item_version_history",
-              )
-
-              entries = []
-              current_entry = None
-
-              for line in section_lines:
-                  version_match = re.match(
-                      r"^[ \t]+-[ \t]+version:[ \t]*(.+?)[ \t]*$",
-                      line,
-                  )
-
-                  field_match = re.match(
-                      r"^[ \t]+([A-Za-z0-9_]+):[ \t]*(.*?)[ \t]*$",
-                      line,
-                  )
-
-                  if version_match:
-                      if current_entry:
-                          entries.append(current_entry)
-
-                      current_entry = {
-                          "version": version_match.group(1).strip()
-                      }
-
-                      continue
-
-                  if field_match and current_entry is not None:
-                      key = field_match.group(1).strip()
-                      value = field_match.group(2).strip()
-
-                      if (
-                          len(value) >= 2
-                          and value[0] == value[-1]
-                          and value[0] in {"'", '"'}
-                      ):
+                  match = re.match(rf"^\s+{re.escape(key)}:\s*(.*?)\s*$", line)
+                  if match:
+                      value = match.group(1).strip()
+                      if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
                           value = value[1:-1]
+                      return value
+              return ""
 
-                      current_entry[key] = value
+          def existing_version(text):
+              # Backward compatible with the old item_version section and
+              # the newer top-level version field.
+              value = nested_scalar(text, "item_version", "version") or scalar(text, "version")
+              return int(value) if value.isdigit() else 0
 
-              if current_entry:
-                  entries.append(current_entry)
+          def existing_commit(text):
+              # The old workflow stored the merge SHA as item_version.sha.
+              return nested_scalar(text, "item_version", "sha") or scalar(text, "commit")
 
+          def parse_history(text):
+              # Preserve history created by both the old workflow
+              # (item_version_history) and the extended workflow
+              # (version_history).
+              lines = text.splitlines()
+              start = None
+              for marker in ("item_version_history:", "version_history:"):
+                  if marker in lines:
+                      start = lines.index(marker) + 1
+                      break
+              if start is None:
+                  return []
+              entries = []
+              current = None
+              for line in lines[start:]:
+                  if line and not line.startswith((" ", "\t")):
+                      break
+                  match_version = re.match(r"^\s+-\s+version:\s*(\d+)\s*$", line)
+                  match_field = re.match(r"^\s+([A-Za-z0-9_]+):\s*(.*?)\s*$", line)
+                  if match_version:
+                      if current:
+                          entries.append(current)
+                      current = {"version": match_version.group(1)}
+                  elif match_field and current is not None:
+                      value = match_field.group(2)
+                      if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                          value = value[1:-1]
+                      current[match_field.group(1)] = value
+              if current:
+                  entries.append(current)
               return entries
 
-
-          def get_manifest_path(item_info):
-              manifest_name = MANIFEST_BY_AREA[item_info["area"]]
-
-              return (
-                  Path("HEMS")
-                  / item_info["area"]
-                  / item_info["function"]
-                  / item_info["sub_function"]
-                  / item_info["item"]
-                  / manifest_name
-              )
-
-
-          def collect_nested_manifest_files(item_directory, manifest_name):
-              collected_files = []
-
-              for file_path in item_directory.rglob("*"):
-                  if not file_path.is_file():
+          def list_content_files(directory, current_manifest_name):
+              files = []
+              for path in directory.rglob("*"):
+                  if not path.is_file():
                       continue
-
-                  if file_path.name == manifest_name:
+                  if path.name in GENERATED_MANIFEST_NAMES:
                       continue
+                  files.append(path.relative_to(directory).as_posix())
+              return sorted(files)
 
-                  relative_path = file_path.relative_to(item_directory)
-                  collected_files.append(relative_path.as_posix())
-
-              return sorted(collected_files)
-
-
-          def build_basic_manifest(item_info, manifest_path):
-              item_directory = manifest_path.parent
-              item_directory.mkdir(parents=True, exist_ok=True)
-
-              manifest_type = MANIFEST_TYPE_BY_AREA[item_info["area"]]
-
-              files = collect_nested_manifest_files(
-                  item_directory,
-                  manifest_path.name,
-              )
-
-              lines = [
-                  f"module: {item_info['item']}",
-                  f"type: {manifest_type}",
-                  f"area: {item_info['area']}",
-                  f"function: {item_info['function']}",
-                  f"sub_function: {item_info['sub_function']}",
-                  "version: not_released",
-                  "delivery_cycle: not_released",
-                  "commit: not_released",
-                  "generated_by: GitHub Actions",
-                  f"generated_on: {updated_utc}",
-                  "structure_type: nested_generated_packages",
+          def render_manifest(identity, old_text, new_version, tag_name, directory, manifest_name):
+              history = [entry for entry in parse_history(old_text)
+                         if entry.get("commit") != merge_sha]
+              history.append({
+                  "version": str(new_version),
+                  "tag": tag_name,
+                  "commit": merge_sha,
+                  "pull_request": pr_number,
+                  "updated_utc": updated_utc,
+              })
+              lines = []
+              for key, value in identity.items():
+                  lines.append(f"{key}: {yaml_quote(value)}")
+              lines.extend([
+                  f"version: {new_version}",
+                  "delivery_cycle: "not_released"",
+                  f"tag: {yaml_quote(tag_name)}",
+                  f"commit: {yaml_quote(merge_sha)}",
+                  f"pull_request: {yaml_quote(pr_number)}",
+                  f"updated_utc: {yaml_quote(updated_utc)}",
+                  f"source_branch: {yaml_quote(source_branch)}",
+                  f"target_branch: {yaml_quote(target_branch)}",
+                  f"pull_request_title: {yaml_quote(pr_title)}",
+                  "generated_by: \"GitHub Actions\"",
+                  "automation_owned: true",
+                  "main_branch_only: true",
                   "files:",
-              ]
-
-              for relative_file in files:
-                  lines.append(f"  - {relative_file}")
-
-              return "\n".join(lines) + "\n"
-
-
-          def determine_old_version(manifest_text):
-              item_version_data = parse_existing_item_version(manifest_text)
-
-              item_version_value = item_version_data.get(
-                  "version",
-                  "",
-              ).strip()
-
-              if item_version_value.isdigit():
-                  return int(item_version_value)
-
-              top_level_version = get_top_level_value(
-                  manifest_text,
-                  "version",
-              )
-
-              if top_level_version.isdigit():
-                  return int(top_level_version)
-
-              return 0
-
-
-          def get_previous_merge_sha(manifest_text):
-              item_version_data = parse_existing_item_version(manifest_text)
-
-              item_version_sha = item_version_data.get("sha", "").strip()
-
-              if item_version_sha:
-                  return item_version_sha
-
-              top_level_commit = get_top_level_value(
-                  manifest_text,
-                  "commit",
-              )
-
-              if top_level_commit in {
-                  "",
-                  "not_released",
-                  "placeholder",
-              }:
-                  return ""
-
-              return top_level_commit
-
-
-          def build_version_sections(
-              old_history,
-              new_version,
-              tag_name,
-              current_merge_sha,
-          ):
-              current_version_lines = [
+              ])
+              content_files = list_content_files(directory, manifest_name)
+              if content_files:
+                  lines.extend(f"  - {yaml_quote(item)}" for item in content_files)
+              else:
+                  lines.append("  []")
+              # Retain the old workflow's current-version fields so
+              # existing consumers do not lose compatibility.
+              lines.extend([
                   "item_version:",
                   f"  version: {new_version}",
-                  f"  tag: {tag_name}",
-                  f"  sha: {current_merge_sha}",
-                  f"  pr: {pr_number}",
+                  f"  tag: {yaml_quote(tag_name)}",
+                  f"  sha: {yaml_quote(merge_sha)}",
+                  f"  pr: {yaml_quote(pr_number)}",
                   f"  updated_utc: {yaml_quote(updated_utc)}",
-              ]
-
-              history_lines = ["item_version_history:"]
-
-              for history_entry in old_history:
-                  history_version = history_entry.get("version", "")
-
-                  if not history_version:
-                      continue
-
-                  history_lines.append(
-                      f"  - version: {history_version}"
-                  )
-
-                  optional_fields = (
-                      "tag",
-                      "sha",
-                      "pr",
-                      "updated_utc",
-                  )
-
-                  for field_name in optional_fields:
-                      field_value = history_entry.get(
-                          field_name,
-                          "",
-                      )
-
-                      if not field_value:
-                          continue
-
-                      if field_name == "updated_utc":
-                          history_lines.append(
-                              f"    {field_name}: "
-                              f"{yaml_quote(field_value)}"
-                          )
-                      else:
-                          history_lines.append(
-                              f"    {field_name}: {field_value}"
-                          )
-
-              history_lines.extend([
-                  f"  - version: {new_version}",
-                  f"    tag: {tag_name}",
-                  f"    sha: {current_merge_sha}",
-                  f"    pr: {pr_number}",
-                  f"    updated_utc: {yaml_quote(updated_utc)}",
+                  "item_version_history:",
               ])
-
-              return current_version_lines, history_lines
-
-
-          print("============================================================")
-          print("Item Specification Versioning")
-          print("============================================================")
-          print()
-          print(f"Repository: {repository}")
-          print(f"Pull request: #{pr_number}")
-          print(f"Pull request title: {pr_title}")
-          print(f"Source branch: {source_branch}")
-          print(f"Target branch: {target_branch}")
-          print(f"Base SHA: {base_sha}")
-          print(f"Merge SHA: {merge_sha}")
-          print()
+              for entry in history:
+                  lines.append(f"  - version: {entry['version']}")
+                  field_aliases = (
+                      ("tag", "tag"),
+                      ("commit", "sha"),
+                      ("sha", "sha"),
+                      ("pull_request", "pr"),
+                      ("pr", "pr"),
+                      ("updated_utc", "updated_utc"),
+                  )
+                  written = set()
+                  for source_field, output_field in field_aliases:
+                      if output_field in written or not entry.get(source_field):
+                          continue
+                      lines.append(f"    {output_field}: {yaml_quote(entry[source_field])}")
+                      written.add(output_field)
+              return "\n".join(lines) + "\n"
 
           if not merge_sha or merge_sha == ZERO_SHA:
+              raise RuntimeError("Pull-request merge commit SHA is unavailable.")
+          git("cat-file", "-e", f"{merge_sha}^{{commit}}")
+
+          parents = git("rev-list", "--parents", "-n", "1", merge_sha).split()
+          if len(parents) < 3:
               raise RuntimeError(
-                  "The pull request merge commit SHA is unavailable."
+                  "The merged PR did not produce a standard merge commit. "
+                  "Use the 'Create a merge commit' merge method."
               )
+          first_parent = parents[1]
 
-          run_git([
-              "git",
-              "cat-file",
-              "-e",
-              f"{merge_sha}^{{commit}}",
-          ])
+          changed_output = git(
+              "diff", "--name-only", "--diff-filter=ACMR",
+              first_parent, merge_sha,
+          )
+          changed_files = [line for line in changed_output.splitlines() if line]
 
-          if (
-              not base_sha
-              or base_sha == ZERO_SHA
-              or not run_git(
-                  [
-                      "git",
-                      "cat-file",
-                      "-e",
-                      f"{base_sha}^{{commit}}",
-                  ],
+          changed_modules = {}
+          changed_specifications = {}
+
+          for file_name in changed_files:
+              parts = file_name.split("/")
+              if len(parts) < 6 or parts[0] != "HEMS":
+                  continue
+              area, function_name, sub_function, module = parts[1:5]
+              if area not in CONTROLLED_AREAS:
+                  continue
+              if Path(file_name).name in IGNORED_METADATA_NAMES:
+                  print(f"Ignoring automation metadata change: {file_name}")
+                  continue
+
+              module_key = (area, function_name, sub_function, module)
+              changed_modules[module_key] = True
+
+              # Package/specification-level content appears at depth 7 or more:
+              # HEMS/AREA/Function/Sub-function/Module/Package/File
+              if area in SPECIFICATION_AREAS and len(parts) >= 7:
+                  package = parts[5]
+                  spec_key = (area, function_name, sub_function, module, package)
+                  changed_specifications[spec_key] = True
+
+          print("============================================================")
+          print("Main-only module and specification versioning")
+          print("============================================================")
+          print(f"Repository: {repository}")
+          print(f"PR: #{pr_number} - {pr_title}")
+          print(f"Merge commit: {merge_sha}")
+          print(f"Changed modules: {len(changed_modules)}")
+          print(f"Changed specifications: {len(changed_specifications)}")
+
+          if not changed_modules:
+              updated_manifests_file.write_text("", encoding="utf-8")
+              created_tags_file.write_text("", encoding="utf-8")
+              with github_output.open("a", encoding="utf-8") as output:
+                  output.write("changes_created=false\n")
+                  output.write("tags_created=false\n")
+              raise SystemExit(0)
+
+          updated_manifests = []
+          created_tags = []
+
+          def update_one_manifest(path, identity, tag_prefix):
+              old_text = read_manifest(path)
+              if existing_commit(old_text) == merge_sha:
+                  print(f"Already versioned for this merge: {path}")
+                  return
+              version = existing_version(old_text) + 1
+              tag_name = f"{tag_prefix}/v{version}"
+
+              existing_remote_tag = git(
+                  "ls-remote", "--tags", "origin", f"refs/tags/{tag_name}",
                   allow_failure=True,
               )
-              == ""
-          ):
-              print(
-                  "Warning: the PR base SHA could not be verified locally."
+              if existing_remote_tag:
+                  raise RuntimeError(
+                      f"Version tag already exists and cannot be reused: {tag_name}"
+                  )
+
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(
+                  render_manifest(
+                      identity, old_text, version, tag_name,
+                      path.parent, path.name,
+                  ),
+                  encoding="utf-8",
               )
+              git(
+                  "tag", "-a", tag_name, merge_sha, "-m",
+                  f"{identity.get('manifest_level', 'version')} version {version}; "
+                  f"PR #{pr_number}; merge {merge_sha}",
+              )
+              updated_manifests.append(path.as_posix())
+              created_tags.append(tag_name)
+              print(f"Updated: {path} -> version {version}")
+              print(f"Created local tag: {tag_name}")
 
-          changed_output = run_git([
-              "git",
-              "diff",
-              "--name-only",
-              "--diff-filter=ACMR",
-              base_sha,
-              merge_sha,
-          ])
-
-          changed_files = [
-              line.strip()
-              for line in changed_output.splitlines()
-              if line.strip()
-          ]
-
-          print("Changed files:")
-
-          if changed_files:
-              for changed_file in changed_files:
-                  print(f" - {changed_file}")
-          else:
-              print(" - No changed files found.")
-
-          print()
-
-          changed_items = {}
-
-          for file_path in changed_files:
-              if not file_path.startswith("HEMS/"):
-                  continue
-
-              if file_path.startswith(IGNORED_PREFIXES):
-                  print(f"Skipping support path: {file_path}")
-                  continue
-
-              parts = file_path.split("/")
-
-              # Supported item-level path:
-              #
-              # HEMS / AREA / Function / Sub-function / Item / File
-              #
-              # Supported nested package path:
-              #
-              # HEMS / AREA / Function / Sub-function / Item /
-              # PackageFolder / File
-              if len(parts) not in {6, 7}:
-                  print(
-                      "Skipping unsupported HEMS path depth: "
-                      f"{file_path}"
-                  )
-                  continue
-
-              root = parts[0]
-              area = parts[1]
-              function_name = parts[2]
-              sub_function = parts[3]
-              item_folder = parts[4]
-              changed_file_name = parts[-1]
-
-              if root != "HEMS":
-                  continue
-
-              if area not in MANIFEST_BY_AREA:
-                  continue
-
-              if changed_file_name in IGNORED_FILE_NAMES:
-                  print(
-                      "Skipping metadata-only change: "
-                      f"{file_path}"
-                  )
-                  continue
-
-              item_key = "/".join(parts[:5])
-
-              changed_items[item_key] = {
+          for area, function_name, sub_function, module in sorted(changed_modules):
+              directory = Path("HEMS") / area / function_name / sub_function / module
+              manifest_name = MODULE_MANIFEST_BY_AREA[area]
+              manifest_path = directory / manifest_name
+              identity = {
+                  "manifest_level": "module",
+                  "module": module,
+                  "type": MODULE_TYPE_BY_AREA[area],
                   "area": area,
                   "function": function_name,
                   "sub_function": sub_function,
-                  "item": item_folder,
-                  "item_folder_path": item_key,
               }
+              prefix = "/".join([
+                  "module", safe_tag(area), safe_tag(function_name),
+                  safe_tag(sub_function), safe_tag(module),
+              ])
+              update_one_manifest(manifest_path, identity, prefix)
 
-          if not changed_items:
-              print(
-                  "No HEMS item content changes requiring version "
-                  "updates were detected."
+          for area, function_name, sub_function, module, package in sorted(changed_specifications):
+              directory = (
+                  Path("HEMS") / area / function_name /
+                  sub_function / module / package
               )
-
-              UPDATED_MANIFESTS_FILE.write_text(
-                  "",
-                  encoding="utf-8",
-              )
-
-              CREATED_TAGS_FILE.write_text(
-                  "",
-                  encoding="utf-8",
-              )
-
-              with Path(os.environ["GITHUB_OUTPUT"]).open(
-                  "a",
-                  encoding="utf-8",
-              ) as output_file:
-                  output_file.write("changes_created=false\n")
-                  output_file.write("tags_created=false\n")
-
-              raise SystemExit(0)
-
-          print("Changed items:")
-          for item_key in sorted(changed_items):
-              print(f" - {item_key}")
-          print()
-
-          created_tags = []
-          updated_manifests = []
-
-          for item_folder_path, item_info in sorted(
-              changed_items.items()
-          ):
-              manifest_path = get_manifest_path(item_info)
-
-              print("------------------------------------------------------------")
-              print(f"Processing item: {item_folder_path}")
-              print(f"Manifest: {manifest_path}")
-
-              if manifest_path.is_file():
-                  original_manifest = manifest_path.read_text(
-                      encoding="utf-8",
-                      errors="ignore",
-                  )
-              else:
-                  print(
-                      "Manifest does not exist. Creating a basic nested "
-                      "structure manifest."
-                  )
-
-                  original_manifest = build_basic_manifest(
-                      item_info,
-                      manifest_path,
-                  )
-
-              old_version = determine_old_version(original_manifest)
-
-              previous_merge_sha = get_previous_merge_sha(
-                  original_manifest
-              )
-
-              if previous_merge_sha == merge_sha:
-                  print(
-                      "Skipping duplicate version update. "
-                      "This merge SHA is already recorded."
-                  )
+              if not directory.is_dir():
+                  print(f"Skipping missing specification package: {directory}")
                   continue
 
-              new_version = old_version + 1
-
-              tag_name = (
-                  "item/"
-                  f"{safe_tag_component(item_info['area'])}/"
-                  f"{safe_tag_component(item_info['function'])}/"
-                  f"{safe_tag_component(item_info['sub_function'])}/"
-                  f"{safe_tag_component(item_info['item'])}/"
-                  f"v{new_version}"
-              )
-
-              existing_history = parse_existing_history(
-                  original_manifest
-              )
-
-              existing_history = [
-                  history_entry
-                  for history_entry in existing_history
-                  if history_entry.get("sha", "") != merge_sha
-              ]
-
-              manifest_without_generated_sections = (
-                  remove_generated_version_sections(
-                      original_manifest
-                  )
-              )
-
-              manifest_without_generated_sections = (
-                  set_top_level_value(
-                      manifest_without_generated_sections,
-                      "version",
-                      str(new_version),
-                  )
-              )
-
-              manifest_without_generated_sections = (
-                  set_top_level_value(
-                      manifest_without_generated_sections,
-                      "commit",
-                      merge_sha,
-                  )
-              )
-
-              manifest_without_generated_sections = (
-                  set_top_level_value(
-                      manifest_without_generated_sections,
-                      "generated_by",
-                      "GitHub Actions",
-                  )
-              )
-
-              manifest_without_generated_sections = (
-                  set_top_level_value(
-                      manifest_without_generated_sections,
-                      "generated_on",
-                      updated_utc,
-                  )
-              )
-
-              current_version_lines, history_lines = (
-                  build_version_sections(
-                      existing_history,
-                      new_version,
-                      tag_name,
-                      merge_sha,
-                  )
-              )
-
-              final_manifest = (
-                  manifest_without_generated_sections.rstrip()
-                  + "\n\n"
-                  + "\n".join(current_version_lines)
-                  + "\n\n"
-                  + "\n".join(history_lines)
-                  + "\n"
-              )
-
-              manifest_path.write_text(
-                  final_manifest,
-                  encoding="utf-8",
-              )
-
-              updated_manifests.append(str(manifest_path))
-
-              print(f"Previous item version: {old_version}")
-              print(f"New item version: {new_version}")
-              print(f"Tag: {tag_name}")
-              print(f"Merge SHA: {merge_sha}")
-
-              existing_tag = run_git([
-                  "git",
-                  "tag",
-                  "--list",
-                  tag_name,
-              ])
-
-              if existing_tag:
-                  print(
-                      "Tag already exists. Tag creation skipped: "
-                      f"{tag_name}"
-                  )
+              if area == "SPEC_HEMS":
+                  prefix = f"a_{module}_"
+                  suffix = "_A"
               else:
-                  subprocess.run(
-                      [
-                          "git",
-                          "tag",
-                          "-a",
-                          tag_name,
-                          merge_sha,
-                          "-m",
-                          (
-                              f"Item version {new_version} for "
-                              f"{item_info['item']} after PR "
-                              f"#{pr_number}"
-                          ),
-                      ],
-                      check=True,
-                  )
+                  prefix = f"a_{module}_"
+                  suffix = "_A_RI_16_0(1.0)"
+              specification = package
+              if package.startswith(prefix) and package.endswith(suffix):
+                  specification = package[len(prefix):-len(suffix)]
 
-                  created_tags.append(tag_name)
-                  print(f"Created annotated tag: {tag_name}")
+              manifest_path = directory / SPECIFICATION_MANIFEST
+              identity = {
+                  "manifest_level": "specification",
+                  "specification": specification,
+                  "package": package,
+                  "type": "source_specification" if area == "SPEC_HEMS" else "generated_code_specification",
+                  "area": area,
+                  "function": function_name,
+                  "sub_function": sub_function,
+                  "module": module,
+              }
+              prefix_tag = "/".join([
+                  "specification", safe_tag(area), safe_tag(function_name),
+                  safe_tag(sub_function), safe_tag(module),
+                  safe_tag(specification),
+              ])
+              update_one_manifest(manifest_path, identity, prefix_tag)
 
-          UPDATED_MANIFESTS_FILE.write_text(
-              (
-                  "\n".join(updated_manifests) + "\n"
-                  if updated_manifests
-                  else ""
-              ),
+          updated_manifests_file.write_text(
+              "\n".join(updated_manifests) + ("\n" if updated_manifests else ""),
               encoding="utf-8",
           )
-
-          CREATED_TAGS_FILE.write_text(
-              (
-                  "\n".join(created_tags) + "\n"
-                  if created_tags
-                  else ""
-              ),
+          created_tags_file.write_text(
+              "\n".join(created_tags) + ("\n" if created_tags else ""),
               encoding="utf-8",
           )
+          with github_output.open("a", encoding="utf-8") as output:
+              output.write(f"changes_created={'true' if updated_manifests else 'false'}\n")
+              output.write(f"tags_created={'true' if created_tags else 'false'}\n")
 
-          print()
           print("============================================================")
-          print("Versioning summary")
-          print("============================================================")
-          print(f"Changed items detected: {len(changed_items)}")
           print(f"Manifests updated: {len(updated_manifests)}")
-          print(f"Tags created: {len(created_tags)}")
-
-          if updated_manifests:
-              print()
-              print("Updated manifests:")
-              for updated_manifest in updated_manifests:
-                  print(f" - {updated_manifest}")
-
-          if created_tags:
-              print()
-              print("Created tags:")
-              for created_tag in created_tags:
-                  print(f" - {created_tag}")
-
-          with Path(os.environ["GITHUB_OUTPUT"]).open(
-              "a",
-              encoding="utf-8",
-          ) as output_file:
-              output_file.write(
-                  f"changes_created="
-                  f"{'true' if updated_manifests else 'false'}\n"
-              )
-
-              output_file.write(
-                  f"tags_created="
-                  f"{'true' if created_tags else 'false'}\n"
-              )
+          print(f"Version tags prepared: {len(created_tags)}")
           PYTHON_SCRIPT
 
-      - name: Review updated manifests
+      - name: Review generated main-only manifests
         if: steps.versioning.outputs.changes_created == 'true'
         shell: bash
         run: |
           set -euo pipefail
 
-          echo "Updated manifest files:"
-
-          while IFS= read -r manifest; do
-            [[ -z "$manifest" ]] && continue
-            echo " - $manifest"
-          done < updated-item-manifests.txt
-
+          echo "Automation-generated manifests:"
+          cat updated-manifests.txt
           echo ""
-          echo "Git diff:"
           git diff -- HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS
 
-      - name: Commit updated item manifests
+      - name: Commit manifests to main
         if: steps.versioning.outputs.changes_created == 'true'
         shell: bash
+        env:
+          ACCESS_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           set -euo pipefail
 
           while IFS= read -r manifest; do
             [[ -z "$manifest" ]] && continue
-
             if [[ ! -f "$manifest" ]]; then
-              echo "::error::Updated manifest does not exist: $manifest"
+              echo "::error::Generated manifest is missing: $manifest"
               exit 1
             fi
-
             git add -- "$manifest"
-          done < updated-item-manifests.txt
+          done < updated-manifests.txt
 
           if git diff --cached --quiet; then
-            echo "No item manifest version changes to commit."
+            echo "No manifest changes to commit."
             exit 0
           fi
 
-          git commit \
-            -m "Update item versions after PR #${{ github.event.pull_request.number }}"
+          git commit -m "Update module and specification versions after PR #${PR_NUMBER}"
+
+          AUTH_VALUE="$(printf 'x-access-token:%s' "$ACCESS_TOKEN" | base64 | tr -d '\n')"
+          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH_VALUE}"
+          trap 'git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true' EXIT
+
+          # Protect against silently overwriting newer main-branch changes.
+          git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+          if [[ "$(git rev-parse refs/remotes/origin/main)" != "$MERGE_SHA" ]]; then
+            echo "::error::main moved after PR #${PR_NUMBER} was merged. Rerun after reconciling the latest main branch."
+            exit 1
+          fi
 
           git push origin HEAD:main
+          git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
+          trap - EXIT
 
-      - name: Push created item version tags
+      - name: Push module and specification version tags
         if: steps.versioning.outputs.tags_created == 'true'
         shell: bash
+        env:
+          ACCESS_TOKEN: ${{ github.token }}
+          SERVER_URL: ${{ github.server_url }}
         run: |
           set -euo pipefail
 
+          AUTH_VALUE="$(printf 'x-access-token:%s' "$ACCESS_TOKEN" | base64 | tr -d '\n')"
+          git config --local http."${SERVER_URL}/".extraheader "AUTHORIZATION: basic ${AUTH_VALUE}"
+          trap 'git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true' EXIT
+
           while IFS= read -r tag_name; do
             [[ -z "$tag_name" ]] && continue
-
-            echo "Pushing tag: $tag_name"
+            echo "Pushing version tag: $tag_name"
             git push origin "refs/tags/$tag_name"
-          done < created-item-tags.txt
+          done < created-version-tags.txt
 
-      - name: Versioning completed
+          git config --local --unset-all http."${SERVER_URL}/".extraheader 2>/dev/null || true
+          trap - EXIT
+
+      - name: Versioning summary
         shell: bash
         run: |
           set -euo pipefail
 
           if [[ "${{ steps.versioning.outputs.changes_created }}" == "true" ]]; then
-            echo "Item specification versioning completed successfully."
+            echo "Module and specification versioning completed successfully."
+            echo "The generated manifests were committed only to main."
           else
-            echo "No applicable HEMS item content changes were detected."
+            echo "No applicable HEMS engineering-content changes were detected."
           fi
