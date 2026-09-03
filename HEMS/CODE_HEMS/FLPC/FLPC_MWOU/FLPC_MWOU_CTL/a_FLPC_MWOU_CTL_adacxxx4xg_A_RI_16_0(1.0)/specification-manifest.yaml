@@ -6,12 +6,12 @@ area: "CODE_HEMS"
 function: "FLPC"
 sub_function: "FLPC_MWOU"
 module: "FLPC_MWOU_CTL"
-version: 1
+version: 2
 delivery_cycle: "not_released"
-version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx4xg/v1"
-commit: "8275047d10973f183536e07e28a702c11433fa6b"
-pull_request: "34"
-updated_utc: "2026-08-31T07:25:56Z"
+version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx4xg/v2"
+commit: "1ce18ec7d071526ce43deff97931a509da24f53c"
+pull_request: "44"
+updated_utc: "2026-09-03T12:58:42Z"
 source_branch: "feature/a"
 target_branch: "main"
 pull_request_title: "Update FLPC_MWOU_CTL_adacxxx4xg.c"
@@ -23,14 +23,19 @@ files:
   - "FLPC_MWOU_CTL_adacxxx4xg.h"
   - "FLPC_MWOU_CTL_adacxxx4xg_Memmap.h"
 item_version:
-  version: 1
-  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx4xg/v1"
-  sha: "8275047d10973f183536e07e28a702c11433fa6b"
-  pr: "34"
-  updated_utc: "2026-08-31T07:25:56Z"
+  version: 2
+  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx4xg/v2"
+  sha: "1ce18ec7d071526ce43deff97931a509da24f53c"
+  pr: "44"
+  updated_utc: "2026-09-03T12:58:42Z"
 item_version_history:
   - version: 1
     label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx4xg/v1"
     sha: "8275047d10973f183536e07e28a702c11433fa6b"
     pr: "34"
     updated_utc: "2026-08-31T07:25:56Z"
+  - version: 2
+    label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx4xg/v2"
+    sha: "1ce18ec7d071526ce43deff97931a509da24f53c"
+    pr: "44"
+    updated_utc: "2026-09-03T12:58:42Z"
