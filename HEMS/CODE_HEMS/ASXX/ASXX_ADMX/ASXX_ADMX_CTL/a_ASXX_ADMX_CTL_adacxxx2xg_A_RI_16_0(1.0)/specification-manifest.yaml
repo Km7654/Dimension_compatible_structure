@@ -1,0 +1,36 @@
+manifest_level: "specification"
+specification: "adacxxx2xg"
+package: "a_ASXX_ADMX_CTL_adacxxx2xg_A_RI_16_0(1.0)"
+type: "generated_code_specification"
+area: "CODE_HEMS"
+function: "ASXX"
+sub_function: "ASXX_ADMX"
+module: "ASXX_ADMX_CTL"
+version: 1
+delivery_cycle: "not_released"
+version_label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/adacxxx2xg/v1"
+commit: "e16b73dc851679f34a3c205f4a4368b4747013cd"
+pull_request: "59"
+updated_utc: "2026-09-04T10:47:34Z"
+source_branch: "feature/a"
+target_branch: "main"
+pull_request_title: "Update ASXX_ADMX_CTL_adacxxx2xg.c"
+generated_by: "GitHub Actions"
+automation_owned: true
+main_branch_only: true
+files:
+  - "ASXX_ADMX_CTL_adacxxx2xg.c"
+  - "ASXX_ADMX_CTL_adacxxx2xg.h"
+  - "ASXX_ADMX_CTL_adacxxx2xg_Memmap.h"
+item_version:
+  version: 1
+  label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/adacxxx2xg/v1"
+  sha: "e16b73dc851679f34a3c205f4a4368b4747013cd"
+  pr: "59"
+  updated_utc: "2026-09-04T10:47:34Z"
+item_version_history:
+  - version: 1
+    label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CTL/adacxxx2xg/v1"
+    sha: "e16b73dc851679f34a3c205f4a4368b4747013cd"
+    pr: "59"
+    updated_utc: "2026-09-04T10:47:34Z"
