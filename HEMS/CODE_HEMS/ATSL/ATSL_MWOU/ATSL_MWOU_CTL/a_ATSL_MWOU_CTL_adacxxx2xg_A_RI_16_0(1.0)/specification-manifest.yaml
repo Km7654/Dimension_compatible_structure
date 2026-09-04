@@ -6,15 +6,15 @@ area: "CODE_HEMS"
 function: "ATSL"
 sub_function: "ATSL_MWOU"
 module: "ATSL_MWOU_CTL"
-version: 4
+version: 5
 delivery_cycle: "not_released"
-version_label: "specification/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/adacxxx2xg/v4"
-commit: "41444d2bc222ef31df05bd009e9c53a77b60ba0a"
-pull_request: "56"
-updated_utc: "2026-09-04T10:19:08Z"
+version_label: "specification/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/adacxxx2xg/v5"
+commit: "020dd5e06388283ae4f57b1c9446178c3ff425d5"
+pull_request: "58"
+updated_utc: "2026-09-04T10:36:31Z"
 source_branch: "feature/a"
 target_branch: "main"
-pull_request_title: "Update ATSL_MWOU_CTL_adacxxx2xg.c"
+pull_request_title: "#449796 ATSL_MWOU_CTL_adacxxx2xg.c 5"
 generated_by: "GitHub Actions"
 automation_owned: true
 main_branch_only: true
@@ -23,11 +23,11 @@ files:
   - "ATSL_MWOU_CTL_adacxxx2xg.h"
   - "ATSL_MWOU_CTL_adacxxx2xg_Memmap.h"
 item_version:
-  version: 4
-  label: "specification/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/adacxxx2xg/v4"
-  sha: "41444d2bc222ef31df05bd009e9c53a77b60ba0a"
-  pr: "56"
-  updated_utc: "2026-09-04T10:19:08Z"
+  version: 5
+  label: "specification/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/adacxxx2xg/v5"
+  sha: "020dd5e06388283ae4f57b1c9446178c3ff425d5"
+  pr: "58"
+  updated_utc: "2026-09-04T10:36:31Z"
 item_version_history:
   - version: 1
     label: "specification/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/adacxxx2xg/v1"
@@ -49,3 +49,8 @@ item_version_history:
     sha: "41444d2bc222ef31df05bd009e9c53a77b60ba0a"
     pr: "56"
     updated_utc: "2026-09-04T10:19:08Z"
+  - version: 5
+    label: "specification/CODE_HEMS/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/adacxxx2xg/v5"
+    sha: "020dd5e06388283ae4f57b1c9446178c3ff425d5"
+    pr: "58"
+    updated_utc: "2026-09-04T10:36:31Z"
