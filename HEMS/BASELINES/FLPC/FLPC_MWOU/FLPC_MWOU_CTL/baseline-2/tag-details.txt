@@ -1,0 +1,15 @@
+HEMS module baseline
+
+Tag: baseline-2
+Function: FLPC
+Sub-function: FLPC_MWOU
+Module: FLPC_MWOU_CTL
+Pull request: #36
+Merge commit: e5e70c94a095edb16b590feaab703bf7531d6a92
+
+Original merge message:
+baseline -2
+
+updated the baseline structure 2
+
+Downloadable module ZIP: HEMS/BASELINES/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/baseline-2/FLPC_MWOU_CTL-baseline-2.zip
