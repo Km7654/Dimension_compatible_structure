@@ -104,7 +104,7 @@ jobs:
           HEMS_ROOT="HEMS"
           RELEASE_SUFFIX="RI_16_0(1.0)"
           ALLOWED_AREAS=("CODE_HEMS" "MOD_HEMS" "SPEC_HEMS")
-          ALLOWED_VARIANTS=("adacxxx2xg" "adacxxx4xg" "obmxxxx1xg" "obmxxxx2xg")
+          ALLOWED_VARIANTS=("adacxxx2xg" "adacxxx4xg" "obmxxxx1xg" "obmxxxx2xg" "afsfdsa2")
 
           fail=0
           checked_hems_files=0
