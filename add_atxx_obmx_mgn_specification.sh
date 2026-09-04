@@ -40,7 +40,6 @@ CODE_PACKAGE_DIR="$CODE_MODULE_DIR/$CODE_PACKAGE"
 
 CODE_BASE="${MODULE}_${SPECIFICATION}"
 
-
 validate_required_areas() {
   local area
 
@@ -55,7 +54,6 @@ validate_required_areas() {
     fi
   done
 }
-
 
 validate_names() {
   local name
@@ -75,131 +73,130 @@ validate_names() {
     fi
 
     if [[ "$name" == *_ ]]; then
-      ech* "ERROR: $description must not end*with an underscore."
-      echo "R*ceived: $name"
+      echo "ERROR: $description must not end with an underscore."
+      echo "Received: $name"
       exit 1
-    fi  done <<EOF
+    fi
+  done <<EOF
 Function|$FUNCTION
-Su*-function|$SUBFUNCTION
-Module|$MOD*LE
+Sub-function|$SUBFUNCTION
+Module|$MODULE
 Specification|$SPECIFICATION
-EO*
+EOF
 }
 
-
 create_file() {
-  local file_*ath="$1"
+  local file_path="$1"
 
-  mkdir -p "$(dirname "$*ile_path")"
+  mkdir -p "$(dirname "$file_path")"
 
   if [[ -e "$file_path" ]]; then
-    echo "Keeping exist*ng file:"
+    echo "Keeping existing file:"
     echo "  $file_path"
-* else
+  else
     : > "$file_path"
-    ech* "Created file:"
-    echo "  $file*path"
+    echo "Created file:"
+    echo "  $file_path"
   fi
 }
 
-
-create_mod_package(* {
+create_mod_package() {
   if [[ -d "$MOD_PACKAGE_DIR" ]]; then
     echo ""
-    echo "MOD p*ckage already exists and will be r*used:"
-    echo "  $MOD_PACKAGE_DI*"
+    echo "MOD package already exists and will be reused:"
+    echo "  $MOD_PACKAGE_DIR"
     return
   fi
 
   echo ""
-  ech* "Creating MOD package:"
-  echo " *$MOD_PACKAGE_DIR"
+  echo "Creating MOD package:"
+  echo "  $MOD_PACKAGE_DIR"
 
-  mkdir -p "$MO*_PACKAGE_DIR"
+  mkdir -p "$MOD_PACKAGE_DIR"
 
-  create_file "$MOD*PACKAGE_DIR/${MOD_PACKAGE}.slx"
-  *reate_file "$MOD_PACKAGE_DIR/${MOD*PACKAGE}_Variant.xlsx"
-  create_fi*e "$MOD_PACKAGE_DIR/${MODULE}_Modu*e_Interface.xlsx"
-  create_file "$*OD_PACKAGE_DIR/MXAM_Report_[4_selected_artifacts]_2026.xlsx"
+  create_file "$MOD_PACKAGE_DIR/${MOD_PACKAGE}.slx"
+  create_file "$MOD_PACKAGE_DIR/${MOD_PACKAGE}_Variant.xlsx"
+  create_file "$MOD_PACKAGE_DIR/${MODULE}_Module_Interface.xlsx"
+  create_file "$MOD_PACKAGE_DIR/MXAM_Report_[4_selected_artifacts]_2026.xlsx"
 }
 
-
-crea*e_spec_package() {
+create_spec_package() {
   if [[ -e "$SPEC_PACKAGE_DIR" ]]; then
-    echo "*RROR: The specification package al*eady exists:"
-    echo "  $SPEC_PA*KAGE_DIR"
-    exit 1
-  fi
-
-  echo *"
-  echo "Creating SPEC package:"
-* echo "  $SPEC_PACKAGE_DIR"
-
-  mkd*r -p "$SPEC_PACKAGE_DIR"
-
-  create*file "$SPEC_PACKAGE_DIR/${SPEC_PAC*AGE}(10-0).pdf"
-  create_file "$SP*C_PACKAGE_DIR/${SPEC_PACKAGE}.slx"*  create_file "$SPEC_PACKAGE_DIR/$*SPEC_PACKAGE}.html"
-  create_file *$SPEC_PACKAGE_DIR/${SPEC_PACKAGE}_*ata.m"
-  create_file "$SPEC_PACKAG*_DIR/${SPEC_PACKAGE}_DR_Report.xls*"
-  create_file "$SPEC_PACKAGE_DIR*ReportMR_${SPEC_PACKAGE}.pdf"
-  cr*ate_file "$SPEC_PACKAGE_DIR/Report*RDICO_${SPEC_PACKAGE}.xlsx"
-}
-
-
-cr*ate_code_package() {
-  if [[ -e "$CODE_PACKAGE_DIR" ]]; then
-    echo*"ERROR: The code package already e*ists:"
-    echo "  $CODE_PACKAGE_D*R"
+    echo "ERROR: The specification package already exists:"
+    echo "  $SPEC_PACKAGE_DIR"
     exit 1
   fi
 
   echo ""
-  ec*o "Creating CODE package:"
-  echo *  $CODE_PACKAGE_DIR"
+  echo "Creating SPEC package:"
+  echo "  $SPEC_PACKAGE_DIR"
 
-  mkdir -p "*CODE_PACKAGE_DIR"
+  mkdir -p "$SPEC_PACKAGE_DIR"
 
-  create_file "*CODE_PACKAGE_DIR/${CODE_BASE}.c"
- *create_file "$CODE_PACKAGE_DIR/${C*DE_BASE}.h"
-  create_file "$CODE_P*CKAGE_DIR/${CODE_BASE}_Memmap.h"
-}*
+  create_file "$SPEC_PACKAGE_DIR/${SPEC_PACKAGE}(10-0).pdf"
+  create_file "$SPEC_PACKAGE_DIR/${SPEC_PACKAGE}.slx"
+  create_file "$SPEC_PACKAGE_DIR/${SPEC_PACKAGE}.html"
+  create_file "$SPEC_PACKAGE_DIR/${SPEC_PACKAGE}_data.m"
+  create_file "$SPEC_PACKAGE_DIR/${SPEC_PACKAGE}_DR_Report.xlsx"
+  create_file "$SPEC_PACKAGE_DIR/ReportMR_${SPEC_PACKAGE}.pdf"
+  create_file "$SPEC_PACKAGE_DIR/ReportMRDICO_${SPEC_PACKAGE}.xlsx"
+}
+
+create_code_package() {
+  if [[ -e "$CODE_PACKAGE_DIR" ]]; then
+    echo "ERROR: The code package already exists:"
+    echo "  $CODE_PACKAGE_DIR"
+    exit 1
+  fi
+
+  echo ""
+  echo "Creating CODE package:"
+  echo "  $CODE_PACKAGE_DIR"
+
+  mkdir -p "$CODE_PACKAGE_DIR"
+
+  create_file "$CODE_PACKAGE_DIR/${CODE_BASE}.c"
+  create_file "$CODE_PACKAGE_DIR/${CODE_BASE}.h"
+  create_file "$CODE_PACKAGE_DIR/${CODE_BASE}_Memmap.h"
+}
 
 print_summary() {
   echo ""
-  ec*o "===============================*============================"
-  ec*o "Specification creation complete* successfully"
-  echo "===========*==================================*============="
+  echo "============================================================"
+  echo "Specification creation completed successfully"
+  echo "============================================================"
   echo ""
-  echo "F*nction:"
+  echo "Function:"
   echo "  $FUNCTION"
-  ec*o ""
+  echo ""
   echo "Sub-function:"
-  echo*"  $SUBFUNCTION"
+  echo "  $SUBFUNCTION"
   echo ""
-  echo *Module:"
+  echo "Module:"
   echo "  $MODULE"
-  echo*""
-  echo "Specification variant:"*  echo "  $SPECIFICATION"
-  echo "*
-  echo "Created or reused MOD pac*age:"
-  echo "  $MOD_PACKAGE_DIR"
-* echo ""
-  echo "Created SPEC pack*ge:"
-  echo "  $SPEC_PACKAGE_DIR"
-* echo ""
-  echo "Created CODE pack*ge:"
-  echo "  $CODE_PACKAGE_DIR"
-* echo ""
-  echo "Created placehold*r content:"
-  echo "  - 1 MOD pack*ge with 4 files, unless already pr*sent"
-  echo "  - 1 SPEC package w*th 7 files"
-  echo "  - 1 CODE pac*age with 3 files"
   echo ""
-  echo*"Expected specification manifest a*ter merge:"
-  echo "  $SPEC_PACKAG*_DIR/specification-manifest.yaml"
-* echo ""
-  echo "Expected code spe*ification manifest after merge:"
- *echo "  $CODE_PACKAGE_DIR/specification-manifest.yaml"
+  echo "Specification variant:"
+  echo "  $SPECIFICATION"
+  echo ""
+  echo "Created or reused MOD package:"
+  echo "  $MOD_PACKAGE_DIR"
+  echo ""
+  echo "Created SPEC package:"
+  echo "  $SPEC_PACKAGE_DIR"
+  echo ""
+  echo "Created CODE package:"
+  echo "  $CODE_PACKAGE_DIR"
+  echo ""
+  echo "Created placeholder content:"
+  echo "  - 1 MOD package with 4 files, unless already present"
+  echo "  - 1 SPEC package with 7 files"
+  echo "  - 1 CODE package with 3 files"
+  echo ""
+  echo "Expected specification manifest after merge:"
+  echo "  $SPEC_PACKAGE_DIR/specification-manifest.yaml"
+  echo ""
+  echo "Expected code specification manifest after merge:"
+  echo "  $CODE_PACKAGE_DIR/specification-manifest.yaml"
   echo ""
   echo "The manifest files are not created by this script."
   echo "They will be generated by the post-merge manifest workflow."
@@ -207,7 +204,6 @@ print_summary() {
   echo "Review the placeholder files, replace them with the actual"
   echo "delivery content, and commit the changes on a feature branch."
 }
-
 
 validate_required_areas
 validate_names
