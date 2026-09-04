@@ -6,15 +6,15 @@ area: "CODE_HEMS"
 function: "FLPC"
 sub_function: "FLPC_MWOU"
 module: "FLPC_MWOU_CTL"
-version: 2
+version: 3
 delivery_cycle: "not_released"
-version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v2"
-commit: "025a47cd5b5da8862092e719fecce5f97e077e78"
-pull_request: "53"
-updated_utc: "2026-09-04T10:11:22Z"
+version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v3"
+commit: "973e14becd714c0aee3e93d78340e247e30843f2"
+pull_request: "55"
+updated_utc: "2026-09-04T10:15:39Z"
 source_branch: "feature/a"
 target_branch: "main"
-pull_request_title: "updated the yaml file"
+pull_request_title: "Update ASXX_ADMX_CSM_adacxxx2xg.c"
 generated_by: "GitHub Actions"
 automation_owned: true
 main_branch_only: true
@@ -23,11 +23,11 @@ files:
   - "FLPC_MWOU_CTL_adacxxx2xg.h"
   - "FLPC_MWOU_CTL_adacxxx2xg_Memmap.h"
 item_version:
-  version: 2
-  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v2"
-  sha: "025a47cd5b5da8862092e719fecce5f97e077e78"
-  pr: "53"
-  updated_utc: "2026-09-04T10:11:22Z"
+  version: 3
+  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v3"
+  sha: "973e14becd714c0aee3e93d78340e247e30843f2"
+  pr: "55"
+  updated_utc: "2026-09-04T10:15:39Z"
 item_version_history:
   - version: 1
     label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v1"
@@ -39,3 +39,8 @@ item_version_history:
     sha: "025a47cd5b5da8862092e719fecce5f97e077e78"
     pr: "53"
     updated_utc: "2026-09-04T10:11:22Z"
+  - version: 3
+    label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v3"
+    sha: "973e14becd714c0aee3e93d78340e247e30843f2"
+    pr: "55"
+    updated_utc: "2026-09-04T10:15:39Z"
