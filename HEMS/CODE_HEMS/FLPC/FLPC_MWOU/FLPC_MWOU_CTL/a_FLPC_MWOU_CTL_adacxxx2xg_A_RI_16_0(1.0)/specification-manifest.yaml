@@ -6,15 +6,15 @@ area: "CODE_HEMS"
 function: "FLPC"
 sub_function: "FLPC_MWOU"
 module: "FLPC_MWOU_CTL"
-version: 1
+version: 2
 delivery_cycle: "not_released"
-version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v1"
-commit: "e5e70c94a095edb16b590feaab703bf7531d6a92"
-pull_request: "36"
-updated_utc: "2026-08-31T09:39:12Z"
+version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v2"
+commit: "025a47cd5b5da8862092e719fecce5f97e077e78"
+pull_request: "53"
+updated_utc: "2026-09-04T10:11:22Z"
 source_branch: "feature/a"
 target_branch: "main"
-pull_request_title: "updated the baseline structure 2"
+pull_request_title: "updated the yaml file"
 generated_by: "GitHub Actions"
 automation_owned: true
 main_branch_only: true
@@ -23,14 +23,19 @@ files:
   - "FLPC_MWOU_CTL_adacxxx2xg.h"
   - "FLPC_MWOU_CTL_adacxxx2xg_Memmap.h"
 item_version:
-  version: 1
-  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v1"
-  sha: "e5e70c94a095edb16b590feaab703bf7531d6a92"
-  pr: "36"
-  updated_utc: "2026-08-31T09:39:12Z"
+  version: 2
+  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v2"
+  sha: "025a47cd5b5da8862092e719fecce5f97e077e78"
+  pr: "53"
+  updated_utc: "2026-09-04T10:11:22Z"
 item_version_history:
   - version: 1
     label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v1"
     sha: "e5e70c94a095edb16b590feaab703bf7531d6a92"
     pr: "36"
     updated_utc: "2026-08-31T09:39:12Z"
+  - version: 2
+    label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v2"
+    sha: "025a47cd5b5da8862092e719fecce5f97e077e78"
+    pr: "53"
+    updated_utc: "2026-09-04T10:11:22Z"
