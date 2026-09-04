@@ -6,15 +6,15 @@ area: "CODE_HEMS"
 function: "FLPC"
 sub_function: "FLPC_MWOU"
 module: "FLPC_MWOU_CTL"
-version: 3
+version: 4
 delivery_cycle: "not_released"
-version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v3"
-commit: "973e14becd714c0aee3e93d78340e247e30843f2"
-pull_request: "55"
-updated_utc: "2026-09-04T10:15:39Z"
+version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v4"
+commit: "41444d2bc222ef31df05bd009e9c53a77b60ba0a"
+pull_request: "56"
+updated_utc: "2026-09-04T10:19:08Z"
 source_branch: "feature/a"
 target_branch: "main"
-pull_request_title: "Update ASXX_ADMX_CSM_adacxxx2xg.c"
+pull_request_title: "Update ATSL_MWOU_CTL_adacxxx2xg.c"
 generated_by: "GitHub Actions"
 automation_owned: true
 main_branch_only: true
@@ -23,11 +23,11 @@ files:
   - "FLPC_MWOU_CTL_adacxxx2xg.h"
   - "FLPC_MWOU_CTL_adacxxx2xg_Memmap.h"
 item_version:
-  version: 3
-  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v3"
-  sha: "973e14becd714c0aee3e93d78340e247e30843f2"
-  pr: "55"
-  updated_utc: "2026-09-04T10:15:39Z"
+  version: 4
+  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v4"
+  sha: "41444d2bc222ef31df05bd009e9c53a77b60ba0a"
+  pr: "56"
+  updated_utc: "2026-09-04T10:19:08Z"
 item_version_history:
   - version: 1
     label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v1"
@@ -44,3 +44,8 @@ item_version_history:
     sha: "973e14becd714c0aee3e93d78340e247e30843f2"
     pr: "55"
     updated_utc: "2026-09-04T10:15:39Z"
+  - version: 4
+    label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/adacxxx2xg/v4"
+    sha: "41444d2bc222ef31df05bd009e9c53a77b60ba0a"
+    pr: "56"
+    updated_utc: "2026-09-04T10:19:08Z"
