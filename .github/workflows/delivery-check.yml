@@ -71,7 +71,7 @@ jobs:
 
           CONTROLLED_AREAS=("CODE_HEMS" "MOD_HEMS" "SPEC_HEMS")
           SUPPORT_AREAS=("BASELINES" "DELIVERY_REQUESTS" "INCOMING")
-          ALLOWED_VARIANTS=("adacxxx2xg" "adacxxx4xg" "obmxxxx1xg" "obmxxxx2xg")
+          ALLOWED_VARIANTS=("adacxxx2xg" "adacxxx4xg" "obmxxxx1xg" "obmxxxx2xg" "afsfdsa2")
 
           fail=0
           checked_areas=0
