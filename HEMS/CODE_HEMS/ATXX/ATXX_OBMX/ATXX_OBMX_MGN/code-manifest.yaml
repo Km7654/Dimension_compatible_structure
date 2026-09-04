@@ -1,0 +1,34 @@
+manifest_level: "module"
+module: "ATXX_OBMX_MGN"
+type: "code"
+area: "CODE_HEMS"
+function: "ATXX"
+sub_function: "ATXX_OBMX"
+version: 1
+delivery_cycle: "not_released"
+version_label: "module/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/v1"
+commit: "86aad4c27e0eb3eb0c1d7d89549550db88db9948"
+pull_request: "60"
+updated_utc: "2026-09-04T12:20:23Z"
+source_branch: "feature/a"
+target_branch: "main"
+pull_request_title: "Feature/a"
+generated_by: "GitHub Actions"
+automation_owned: true
+main_branch_only: true
+files:
+  - "a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)/ATXX_OBMX_MGN_afsfdsa2.c"
+  - "a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)/ATXX_OBMX_MGN_afsfdsa2.h"
+  - "a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)/ATXX_OBMX_MGN_afsfdsa2_Memmap.h"
+item_version:
+  version: 1
+  label: "module/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/v1"
+  sha: "86aad4c27e0eb3eb0c1d7d89549550db88db9948"
+  pr: "60"
+  updated_utc: "2026-09-04T12:20:23Z"
+item_version_history:
+  - version: 1
+    label: "module/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/v1"
+    sha: "86aad4c27e0eb3eb0c1d7d89549550db88db9948"
+    pr: "60"
+    updated_utc: "2026-09-04T12:20:23Z"

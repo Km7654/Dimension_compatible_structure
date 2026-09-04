@@ -1,0 +1,35 @@
+manifest_level: "module"
+module: "ATXX_OBMX_MGN"
+type: "module"
+area: "MOD_HEMS"
+function: "ATXX"
+sub_function: "ATXX_OBMX"
+version: 1
+delivery_cycle: "not_released"
+version_label: "module/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/v1"
+commit: "86aad4c27e0eb3eb0c1d7d89549550db88db9948"
+pull_request: "60"
+updated_utc: "2026-09-04T12:20:23Z"
+source_branch: "feature/a"
+target_branch: "main"
+pull_request_title: "Feature/a"
+generated_by: "GitHub Actions"
+automation_owned: true
+main_branch_only: true
+files:
+  - "a_ATXX_OBMX_MGN_T_A/ATXX_OBMX_MGN_Module_Interface.xlsx"
+  - "a_ATXX_OBMX_MGN_T_A/MXAM_Report_[4_selected_artifacts]_2026.xlsx"
+  - "a_ATXX_OBMX_MGN_T_A/a_ATXX_OBMX_MGN_T_A.slx"
+  - "a_ATXX_OBMX_MGN_T_A/a_ATXX_OBMX_MGN_T_A_Variant.xlsx"
+item_version:
+  version: 1
+  label: "module/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/v1"
+  sha: "86aad4c27e0eb3eb0c1d7d89549550db88db9948"
+  pr: "60"
+  updated_utc: "2026-09-04T12:20:23Z"
+item_version_history:
+  - version: 1
+    label: "module/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/v1"
+    sha: "86aad4c27e0eb3eb0c1d7d89549550db88db9948"
+    pr: "60"
+    updated_utc: "2026-09-04T12:20:23Z"

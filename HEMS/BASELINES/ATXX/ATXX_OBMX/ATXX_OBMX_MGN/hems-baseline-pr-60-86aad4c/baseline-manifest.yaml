@@ -1,0 +1,57 @@
+baseline_tag: "hems-baseline-pr-60-86aad4c"
+repository: "Km7654/Dimension_compatible_structure"
+pull_request: "60"
+pull_request_title: "Feature/a"
+tracker_id: "not_available"
+pre_merge_commit: "fcefdee7b335243d3e486f9a17360ce03e06104d"
+merge_commit: "86aad4c27e0eb3eb0c1d7d89549550db88db9948"
+generated_utc: "2026-09-04T12:20:23Z"
+function: "ATXX"
+sub_function: "ATXX_OBMX"
+module: "ATXX_OBMX_MGN"
+versions:
+  - type: "specification"
+    component: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2"
+    previous_version: 0
+    version: 1
+    manifest: "HEMS/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)/specification-manifest.yaml"
+  - type: "specification"
+    component: "specification/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2"
+    previous_version: 0
+    version: 1
+    manifest: "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/specification-manifest.yaml"
+  - type: "module"
+    component: "module/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN"
+    previous_version: 0
+    version: 1
+    manifest: "HEMS/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/code-manifest.yaml"
+  - type: "module"
+    component: "module/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN"
+    previous_version: 0
+    version: 1
+    manifest: "HEMS/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/module-manifest.yaml"
+  - type: "module"
+    component: "module/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN"
+    previous_version: 0
+    version: 1
+    manifest: "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/spec-manifest.yaml"
+included_files:
+  - "HEMS/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)/ATXX_OBMX_MGN_afsfdsa2.c"
+  - "HEMS/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)/ATXX_OBMX_MGN_afsfdsa2.h"
+  - "HEMS/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)/ATXX_OBMX_MGN_afsfdsa2_Memmap.h"
+  - "HEMS/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)/specification-manifest.yaml"
+  - "HEMS/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/code-manifest.yaml"
+  - "HEMS/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_T_A/ATXX_OBMX_MGN_Module_Interface.xlsx"
+  - "HEMS/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_T_A/MXAM_Report_[4_selected_artifacts]_2026.xlsx"
+  - "HEMS/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_T_A/a_ATXX_OBMX_MGN_T_A.slx"
+  - "HEMS/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_T_A/a_ATXX_OBMX_MGN_T_A_Variant.xlsx"
+  - "HEMS/MOD_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/module-manifest.yaml"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/ReportMRDICO_a_ATXX_OBMX_MGN_afsfdsa2_A.xlsx"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/ReportMR_a_ATXX_OBMX_MGN_afsfdsa2_A.pdf"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/a_ATXX_OBMX_MGN_afsfdsa2_A(10-0).pdf"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/a_ATXX_OBMX_MGN_afsfdsa2_A.html"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/a_ATXX_OBMX_MGN_afsfdsa2_A.slx"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/a_ATXX_OBMX_MGN_afsfdsa2_A_DR_Report.xlsx"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/a_ATXX_OBMX_MGN_afsfdsa2_A_data.m"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/a_ATXX_OBMX_MGN_afsfdsa2_A/specification-manifest.yaml"
+  - "HEMS/SPEC_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/spec-manifest.yaml"

@@ -1,0 +1,20 @@
+HEMS module baseline
+
+Tag: hems-baseline-pr-60-86aad4c
+Repository: Km7654/Dimension_compatible_structure
+Pull request: #60
+Pull request title: Feature/a
+Tracker reference: not_available
+Main before merge: fcefdee7b335243d3e486f9a17360ce03e06104d
+Main after merge: 86aad4c27e0eb3eb0c1d7d89549550db88db9948
+Function: ATXX
+Sub-function: ATXX_OBMX
+Module: ATXX_OBMX_MGN
+
+Original merge message:
+Merge pull request #60 from Km7654/feature/a
+
+Feature/a
+
+Downloadable module ZIP:
+HEMS/BASELINES/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/hems-baseline-pr-60-86aad4c/ATXX_OBMX_MGN-hems-baseline-pr-60-86aad4c.zip
