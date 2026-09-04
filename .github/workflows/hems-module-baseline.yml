@@ -7,6 +7,11 @@ on:
     branches:
       - main
 
+  # Used when the Auto Codebeamer workflow merges a PR using GITHUB_TOKEN.
+  repository_dispatch:
+    types:
+      - hems-post-merge
+
 permissions:
   contents: write
   pull-requests: read
@@ -16,9 +21,120 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare-event:
+    name: Resolve merged Pull Request
+    runs-on: ubuntu-latest
+
+    outputs:
+      should_process: ${{ steps.resolve.outputs.should_process }}
+      pr_number: ${{ steps.resolve.outputs.pr_number }}
+      pr_title: ${{ steps.resolve.outputs.pr_title }}
+      source_branch: ${{ steps.resolve.outputs.source_branch }}
+      target_branch: ${{ steps.resolve.outputs.target_branch }}
+      merge_sha: ${{ steps.resolve.outputs.merge_sha }}
+
+    steps:
+      - name: Verify required tools
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          for tool in gh python3; do
+            if ! command -v "$tool" >/dev/null 2>&1; then
+              echo "::error::Required runner tool is missing: $tool"
+              exit 1
+            fi
+          done
+
+      - name: Resolve merged Pull Request information
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_HOST_URL: ${{ github.server_url }}
+          GH_REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_PR_MERGED: ${{ github.event.pull_request.merged }}
+          DISPATCH_PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+        run: |
+          set -euo pipefail
+
+          GH_HOST="${GH_HOST_URL#https://}"
+          GH_HOST="${GH_HOST#http://}"
+          export GH_HOST GH_REPO
+
+          if [[ "$EVENT_NAME" == "repository_dispatch" ]]; then
+            PR_NUMBER="$DISPATCH_PR_NUMBER"
+          else
+            PR_NUMBER="$EVENT_PR_NUMBER"
+          fi
+
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "::error::Pull Request number is unavailable."
+            exit 1
+          fi
+
+          echo "Resolving Pull Request #${PR_NUMBER}."
+
+          gh pr view "$PR_NUMBER" \
+            --json number,title,state,mergedAt,baseRefName,headRefName,mergeCommit \
+            > merged-pr.json
+
+          python3 <<'PYTHON_SCRIPT'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(
+              Path("merged-pr.json").read_text(encoding="utf-8")
+          )
+
+          github_output = Path(os.environ["GITHUB_OUTPUT"])
+
+          state = data.get("state", "")
+          merged_at = data.get("mergedAt")
+          merge_commit = data.get("mergeCommit") or {}
+          merge_sha = merge_commit.get("oid", "")
+
+          if state != "MERGED" or not merged_at or not merge_sha:
+              with github_output.open("a", encoding="utf-8") as handle:
+                  handle.write("should_process=false\n")
+
+              print(
+                  f"Pull Request #{data.get('number')} "
+                  "is not confirmed as merged."
+              )
+              raise SystemExit(0)
+
+          values = {
+              "should_process": "true",
+              "pr_number": str(data["number"]),
+              "pr_title": data.get("title", ""),
+              "source_branch": data.get("headRefName", ""),
+              "target_branch": data.get("baseRefName", ""),
+              "merge_sha": merge_sha,
+          }
+
+          with github_output.open("a", encoding="utf-8") as handle:
+              for key, value in values.items():
+                  delimiter = f"EOF_{key.upper()}"
+                  handle.write(f"{key}<<{delimiter}\n")
+                  handle.write(f"{value}\n")
+                  handle.write(f"{delimiter}\n")
+
+          print(f"Resolved merged Pull Request #{data['number']}")
+          print(f"Source branch: {data.get('headRefName', '')}")
+          print(f"Target branch: {data.get('baseRefName', '')}")
+          print(f"Merge commit: {merge_sha}")
+          PYTHON_SCRIPT
+
   create-module-baseline:
     name: Update manifests and create module baselines
-    if: github.event.pull_request.merged == true
+    needs:
+      - prepare-event
+
+    if: needs.prepare-event.outputs.should_process == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -40,13 +156,12 @@ jobs:
           ACCESS_TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
           REPOSITORY: ${{ github.repository }}
-          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MERGE_SHA: ${{ needs.prepare-event.outputs.merge_sha }}
         run: |
           set -euo pipefail
 
           REPOSITORY_URL="${SERVER_URL}/${REPOSITORY}.git"
+
           AUTH_VALUE="$(
             printf 'x-access-token:%s' "$ACCESS_TOKEN" \
               | base64 \
@@ -76,14 +191,9 @@ jobs:
             "+refs/heads/main:refs/remotes/origin/main" \
             "+refs/tags/*:refs/tags/*"
 
-          for required_sha in "$MERGE_SHA" "$BASE_SHA" "$HEAD_SHA"; do
-            if [[ -n "$required_sha" ]] \
-              && [[ "$required_sha" != "0000000000000000000000000000000000000000" ]] \
-              && ! git cat-file -e "${required_sha}^{commit}" 2>/dev/null
-            then
-              git fetch origin "$required_sha"
-            fi
-          done
+          if ! git cat-file -e "${MERGE_SHA}^{commit}" 2>/dev/null; then
+            git fetch origin "$MERGE_SHA"
+          fi
 
           git checkout --force -B main refs/remotes/origin/main
           git clean -ffdx
@@ -91,17 +201,15 @@ jobs:
           cleanup_auth
           trap - EXIT
 
-      - name: Update manifests and create required module baselines
+      - name: Update manifests and create required baselines
         id: baseline
         shell: bash
         env:
-          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
-          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+          MERGE_SHA: ${{ needs.prepare-event.outputs.merge_sha }}
+          PR_NUMBER: ${{ needs.prepare-event.outputs.pr_number }}
+          PR_TITLE: ${{ needs.prepare-event.outputs.pr_title }}
+          SOURCE_BRANCH: ${{ needs.prepare-event.outputs.source_branch }}
+          TARGET_BRANCH: ${{ needs.prepare-event.outputs.target_branch }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -120,8 +228,6 @@ jobs:
 
 
           merge_sha = os.environ["MERGE_SHA"].strip()
-          base_sha = os.environ["BASE_SHA"].strip()
-          head_sha = os.environ["HEAD_SHA"].strip()
           pr_number = os.environ["PR_NUMBER"].strip()
           pr_title = os.environ["PR_TITLE"].strip()
           source_branch = os.environ["SOURCE_BRANCH"].strip()
@@ -418,19 +524,16 @@ jobs:
               ):
                   return None
 
-              area = parts[1]
-              function_name = parts[2]
-              sub_function = parts[3]
-              module = parts[4]
-
-              package = parts[5] if len(parts) >= 7 else ""
-
               return {
-                  "area": area,
-                  "function": function_name,
-                  "sub_function": sub_function,
-                  "module": module,
-                  "package": package,
+                  "area": parts[1],
+                  "function": parts[2],
+                  "sub_function": parts[3],
+                  "module": parts[4],
+                  "package": (
+                      parts[5]
+                      if len(parts) >= 7
+                      else ""
+                  ),
                   "is_package_file": len(parts) >= 7,
                   "is_module_file": len(parts) == 6,
               }
@@ -452,25 +555,18 @@ jobs:
                   "ls-tree",
                   "-d",
                   "--name-only",
-                  commit_sha,
-                  module_path,
+                  f"{commit_sha}:{module_path}",
                   check=False,
               )
 
               if status != 0 or not output:
                   return set()
 
-              packages = set()
-
-              for line in output.splitlines():
-                  line = line.strip()
-
-                  if not line:
-                      continue
-
-                  packages.add(Path(line).name)
-
-              return packages
+              return {
+                  line.strip()
+                  for line in output.splitlines()
+                  if line.strip()
+              }
 
 
           def render_version_manifest(
@@ -577,34 +673,47 @@ jobs:
               return "\n".join(lines) + "\n"
 
 
-          if not merge_sha or merge_sha == "0" * 40:
+          if not merge_sha:
               raise RuntimeError(
-                  "Pull-request merge commit SHA is unavailable."
+                  "Pull Request merge commit SHA is unavailable."
               )
 
 
-          for commit_name, commit_sha in (
-              ("base", base_sha),
-              ("head", head_sha),
-              ("merge", merge_sha),
-          ):
-              if not commit_sha:
-                  raise RuntimeError(
-                      f"Pull-request {commit_name} SHA is unavailable."
-                  )
+          _, merge_status = git(
+              "cat-file",
+              "-e",
+              f"{merge_sha}^{{commit}}",
+              check=False,
+          )
 
-              _, status = git(
-                  "cat-file",
-                  "-e",
-                  f"{commit_sha}^{{commit}}",
-                  check=False,
+          if merge_status != 0:
+              raise RuntimeError(
+                  f"Merge commit does not exist locally: {merge_sha}"
               )
 
-              if status != 0:
-                  raise RuntimeError(
-                      f"Pull-request {commit_name} commit "
-                      f"does not exist locally: {commit_sha}"
-                  )
+
+          # Critical comparison:
+          # Compare main immediately before this merge against main
+          # immediately after this merge.
+          #
+          # This prevents unrelated files from older branch states or
+          # previous automation commits from being detected.
+          pre_merge_sha, _ = git(
+              "rev-parse",
+              f"{merge_sha}^1",
+          )
+
+          print(f"Main before merge: {pre_merge_sha}")
+          print(f"Main after merge: {merge_sha}")
+
+          name_status_text, _ = git(
+              "diff",
+              "--name-status",
+              "--find-renames",
+              "--find-copies",
+              pre_merge_sha,
+              merge_sha,
+          )
 
 
           merge_subject, _ = git(
@@ -637,29 +746,6 @@ jobs:
               else "not_available"
           )
 
-          print("============================================================")
-          print("HEMS post-merge manifest processing")
-          print("============================================================")
-          print(f"Pull Request: #{pr_number}")
-          print(f"Base commit: {base_sha}")
-          print(f"PR head commit: {head_sha}")
-          print(f"Merge commit: {merge_sha}")
-          print(f"Tracker reference: {tracker_reference}")
-          print("")
-          print(
-              "Tracker ID is optional for this workflow and "
-              "does not control manifest or baseline processing."
-          )
-
-
-          name_status_text, _ = git(
-              "diff",
-              "--name-status",
-              "--find-renames",
-              "--find-copies",
-              base_sha,
-              head_sha,
-          )
 
           changed_records = []
 
@@ -676,7 +762,6 @@ jobs:
 
                   old_path = columns[1]
                   new_path = columns[2]
-
               else:
                   if len(columns) < 2:
                       continue
@@ -692,7 +777,10 @@ jobs:
 
 
           print("")
-          print("Changed paths in the merged Pull Request:")
+          print("Files introduced by this merge:")
+
+          if not changed_records:
+              print("No changed files detected.")
 
           for record in changed_records:
               if record["old_path"] == record["new_path"]:
@@ -714,10 +802,9 @@ jobs:
           touched_modules_by_area = set()
           module_level_changes = set()
           mod_hems_changes = set()
-
           package_structure_candidates = set()
 
-          changed_engineering_files_by_module = defaultdict(set)
+          specification_changes_by_module = defaultdict(set)
 
 
           for record in changed_records:
@@ -725,27 +812,20 @@ jobs:
               paths_to_process = []
 
               if status.startswith(("R", "C")):
-                  paths_to_process.append((
-                      record["old_path"],
-                      "old",
-                  ))
-
-                  paths_to_process.append((
-                      record["new_path"],
-                      "new",
-                  ))
+                  paths_to_process.extend([
+                      (record["old_path"], "old"),
+                      (record["new_path"], "new"),
+                  ])
 
               elif status.startswith("D"):
-                  paths_to_process.append((
-                      record["old_path"],
-                      "old",
-                  ))
+                  paths_to_process.append(
+                      (record["old_path"], "old")
+                  )
 
               else:
-                  paths_to_process.append((
-                      record["new_path"],
-                      "new",
-                  ))
+                  paths_to_process.append(
+                      (record["new_path"], "new")
+                  )
 
 
               for file_name, path_side in paths_to_process:
@@ -756,7 +836,7 @@ jobs:
 
                   if Path(file_name).name in GENERATED_METADATA:
                       print(
-                          "Ignoring automation-generated metadata: "
+                          "Ignoring automation-generated file: "
                           f"{file_name}"
                       )
                       continue
@@ -774,17 +854,7 @@ jobs:
                       module,
                   )
 
-                  common_module_key = (
-                      function_name,
-                      sub_function,
-                      module,
-                  )
-
                   touched_modules_by_area.add(module_key)
-
-                  changed_engineering_files_by_module[
-                      common_module_key
-                  ].add(file_name)
 
                   if identity["is_module_file"]:
                       module_level_changes.add(module_key)
@@ -803,6 +873,10 @@ jobs:
                           module,
                           package,
                       )
+
+                      specification_changes_by_module[
+                          module_key
+                      ].add(package)
 
                       if (
                           status.startswith("D")
@@ -831,7 +905,7 @@ jobs:
           ) in sorted(package_structure_candidates):
 
               before_packages = list_packages_at_commit(
-                  base_sha,
+                  pre_merge_sha,
                   area,
                   function_name,
                   sub_function,
@@ -839,7 +913,7 @@ jobs:
               )
 
               after_packages = list_packages_at_commit(
-                  head_sha,
+                  merge_sha,
                   area,
                   function_name,
                   sub_function,
@@ -878,37 +952,12 @@ jobs:
                       print(f"  Removed package: {package}")
 
 
-          specification_changes_by_module = defaultdict(set)
-
-          for specification_key in (
-              changed_specifications
-              | deleted_specifications
-          ):
-              (
-                  area,
-                  function_name,
-                  sub_function,
-                  module,
-                  package,
-              ) = specification_key
-
-              specification_changes_by_module[(
-                  area,
-                  function_name,
-                  sub_function,
-                  module,
-              )].add(package)
-
-
-          multiple_specification_changes = set()
-
-          for module_key, packages in (
-              specification_changes_by_module.items()
-          ):
-              if len(packages) > 1:
-                  multiple_specification_changes.add(
-                      module_key
-                  )
+          multiple_specification_changes = {
+              module_key
+              for module_key, packages
+              in specification_changes_by_module.items()
+              if len(packages) > 1
+          }
 
 
           modules_requiring_version_update = set()
@@ -930,56 +979,6 @@ jobs:
           )
 
 
-          print("")
-          print("Module-version decision:")
-
-          if modules_requiring_version_update:
-              for module_key in sorted(
-                  modules_requiring_version_update
-              ):
-                  (
-                      area,
-                      function_name,
-                      sub_function,
-                      module,
-                  ) = module_key
-
-                  reasons = []
-
-                  if module_key in module_level_changes:
-                      reasons.append(
-                          "module-level file changed"
-                      )
-
-                  if module_key in mod_hems_changes:
-                      reasons.append(
-                          "MOD_HEMS content changed"
-                      )
-
-                  if module_key in package_count_changes:
-                      reasons.append(
-                          "package added or removed"
-                      )
-
-                  if (
-                      module_key
-                      in multiple_specification_changes
-                  ):
-                      reasons.append(
-                          "multiple specifications changed"
-                      )
-
-                  print(
-                      f"- {area}/{function_name}/"
-                      f"{sub_function}/{module}: "
-                      + ", ".join(reasons)
-                  )
-          else:
-              print(
-                  "No module version increment is required."
-              )
-
-
           updated_manifests = []
           version_summary = []
 
@@ -990,13 +989,14 @@ jobs:
               logical_name,
               item_type,
           ):
-              if manifest_path.is_file():
-                  old_text = manifest_path.read_text(
+              old_text = (
+                  manifest_path.read_text(
                       encoding="utf-8",
                       errors="replace",
                   )
-              else:
-                  old_text = ""
+                  if manifest_path.is_file()
+                  else ""
+              )
 
               if current_merge(old_text) == merge_sha:
                   print(
@@ -1007,7 +1007,6 @@ jobs:
 
               previous_version = current_version(old_text)
               next_version = previous_version + 1
-
               version_label = (
                   f"{logical_name}/v{next_version}"
               )
@@ -1030,7 +1029,9 @@ jobs:
 
               manifest_string = manifest_path.as_posix()
 
-              updated_manifests.append(manifest_string)
+              updated_manifests.append(
+                  manifest_string
+              )
 
               version_summary.append({
                   "type": item_type,
@@ -1051,39 +1052,14 @@ jobs:
               return next_version
 
 
-          active_changed_specifications = set()
-
-          for specification_key in changed_specifications:
-              (
-                  area,
-                  function_name,
-                  sub_function,
-                  module,
-                  package,
-              ) = specification_key
-
-              package_directory = (
-                  Path("HEMS")
-                  / area
-                  / function_name
-                  / sub_function
-                  / module
-                  / package
-              )
-
-              if package_directory.is_dir():
-                  active_changed_specifications.add(
-                      specification_key
-                  )
-
-
+          # Update each affected specification exactly once.
           for (
               area,
               function_name,
               sub_function,
               module,
               package,
-          ) in sorted(active_changed_specifications):
+          ) in sorted(changed_specifications):
 
               package_directory = (
                   Path("HEMS")
@@ -1093,6 +1069,13 @@ jobs:
                   / module
                   / package
               )
+
+              if not package_directory.is_dir():
+                  print(
+                      "Skipping removed package: "
+                      f"{package_directory}"
+                  )
+                  continue
 
               specification = extract_specification(
                   area,
@@ -1100,12 +1083,12 @@ jobs:
                   package,
               )
 
-              specification_manifest = (
+              manifest_path = (
                   package_directory
                   / "specification-manifest.yaml"
               )
 
-              specification_identity = {
+              identity = {
                   "manifest_level": "specification",
                   "specification": specification,
                   "package": package,
@@ -1120,7 +1103,7 @@ jobs:
                   "module": module,
               }
 
-              specification_logical_name = "/".join([
+              logical_name = "/".join([
                   "specification",
                   area,
                   function_name,
@@ -1130,13 +1113,18 @@ jobs:
               ])
 
               update_manifest(
-                  manifest_path=specification_manifest,
-                  identity=specification_identity,
-                  logical_name=specification_logical_name,
+                  manifest_path=manifest_path,
+                  identity=identity,
+                  logical_name=logical_name,
                   item_type="specification",
               )
 
 
+          # Update a module manifest only when:
+          # 1. A module-level file changed.
+          # 2. MOD_HEMS content changed.
+          # 3. A package was added or removed.
+          # 4. Multiple specifications changed in the module.
           for (
               area,
               function_name,
@@ -1154,17 +1142,17 @@ jobs:
 
               if not module_directory.is_dir():
                   print(
-                      "Skipping removed module directory: "
+                      "Skipping removed module: "
                       f"{module_directory}"
                   )
                   continue
 
-              module_manifest = (
+              manifest_path = (
                   module_directory
                   / MODULE_MANIFEST_BY_AREA[area]
               )
 
-              module_identity = {
+              identity = {
                   "manifest_level": "module",
                   "module": module,
                   "type": MODULE_TYPE_BY_AREA[area],
@@ -1173,7 +1161,7 @@ jobs:
                   "sub_function": sub_function,
               }
 
-              module_logical_name = "/".join([
+              logical_name = "/".join([
                   "module",
                   area,
                   function_name,
@@ -1182,9 +1170,9 @@ jobs:
               ])
 
               update_manifest(
-                  manifest_path=module_manifest,
-                  identity=module_identity,
-                  logical_name=module_logical_name,
+                  manifest_path=manifest_path,
+                  identity=identity,
+                  logical_name=logical_name,
                   item_type="module",
               )
 
@@ -1210,16 +1198,13 @@ jobs:
               ).is_dir()
           }
 
-
           baseline_created = bool(
               unique_baseline_modules
           )
 
-          short_merge_sha = merge_sha[:7]
-
           tag_name = safe_name(
               f"hems-baseline-pr-{pr_number}-"
-              f"{short_merge_sha}"
+              f"{merge_sha[:7]}"
           )[:120]
 
 
@@ -1355,25 +1340,24 @@ jobs:
               )
 
 
-              relevant_versions = []
-
-              for record in version_summary:
-                  expected_path = (
+              relevant_versions = [
+                  record
+                  for record in version_summary
+                  if (
                       f"/{function_name}/"
                       f"{sub_function}/"
                       f"{module}"
-                  )
-
-                  if expected_path in record["logical_name"]:
-                      relevant_versions.append(record)
+                  ) in record["logical_name"]
+              ]
 
 
-              baseline_manifest_lines = [
+              manifest_lines = [
                   f"baseline_tag: {yaml_quote(tag_name)}",
                   f"repository: {yaml_quote(repository)}",
                   f"pull_request: {yaml_quote(pr_number)}",
                   f"pull_request_title: {yaml_quote(pr_title)}",
                   f"tracker_id: {yaml_quote(tracker_reference)}",
+                  f"pre_merge_commit: {yaml_quote(pre_merge_sha)}",
                   f"merge_commit: {yaml_quote(merge_sha)}",
                   f"generated_utc: {yaml_quote(generated_utc)}",
                   f"function: {yaml_quote(function_name)}",
@@ -1384,7 +1368,7 @@ jobs:
 
               if relevant_versions:
                   for record in relevant_versions:
-                      baseline_manifest_lines.extend([
+                      manifest_lines.extend([
                           "  - type: "
                           + yaml_quote(record["type"]),
                           "    component: "
@@ -1403,21 +1387,19 @@ jobs:
                           ),
                       ])
               else:
-                  baseline_manifest_lines.append("  []")
+                  manifest_lines.append("  []")
 
-              baseline_manifest_lines.append(
+              manifest_lines.append(
                   "included_files:"
               )
 
               for included_file in included_files:
-                  baseline_manifest_lines.append(
+                  manifest_lines.append(
                       f"  - {yaml_quote(included_file)}"
                   )
 
               baseline_manifest.write_text(
-                  "\n".join(
-                      baseline_manifest_lines
-                  ) + "\n",
+                  "\n".join(manifest_lines) + "\n",
                   encoding="utf-8",
               )
 
@@ -1425,10 +1407,8 @@ jobs:
               checksum_lines = []
 
               for included_file in included_files:
-                  included_path = Path(included_file)
-
                   digest = hashlib.sha256(
-                      included_path.read_bytes()
+                      Path(included_file).read_bytes()
                   ).hexdigest()
 
                   checksum_lines.append(
@@ -1449,9 +1429,9 @@ jobs:
                       f"Repository: {repository}",
                       f"Pull request: #{pr_number}",
                       f"Pull request title: {pr_title}",
-                      f"Tracker reference: "
-                      f"{tracker_reference}",
-                      f"Merge commit: {merge_sha}",
+                      f"Tracker reference: {tracker_reference}",
+                      f"Main before merge: {pre_merge_sha}",
+                      f"Main after merge: {merge_sha}",
                       f"Function: {function_name}",
                       f"Sub-function: {sub_function}",
                       f"Module: {module}",
@@ -1510,34 +1490,33 @@ jobs:
               })
 
 
-          consolidated_details = [
-              "HEMS consolidated module baseline",
-              "",
-              f"Tag: {tag_name}",
-              f"Repository: {repository}",
-              f"Pull request: #{pr_number}",
-              f"Pull request title: {pr_title}",
-              f"Tracker reference: {tracker_reference}",
-              f"Merge commit: {merge_sha}",
-              "",
-              "Original merge message:",
-              merge_message,
-              "",
-              "Affected modules and baseline ZIP paths:",
-          ]
+          if baseline_created:
+              consolidated_details = [
+                  "HEMS consolidated module baseline",
+                  "",
+                  f"Tag: {tag_name}",
+                  f"Repository: {repository}",
+                  f"Pull request: #{pr_number}",
+                  f"Pull request title: {pr_title}",
+                  f"Tracker reference: {tracker_reference}",
+                  f"Main before merge: {pre_merge_sha}",
+                  f"Main after merge: {merge_sha}",
+                  "",
+                  "Affected modules and baseline ZIP paths:",
+              ]
 
-          for record in module_package_records:
-              consolidated_details.extend([
-                  f"- {record['function']}/"
-                  f"{record['sub_function']}/"
-                  f"{record['module']}",
-                  f"  ZIP: {record['zip']}",
-              ])
+              for record in module_package_records:
+                  consolidated_details.extend([
+                      f"- {record['function']}/"
+                      f"{record['sub_function']}/"
+                      f"{record['module']}",
+                      f"  ZIP: {record['zip']}",
+                  ])
 
-          TAG_DETAILS_FILE.write_text(
-              "\n".join(consolidated_details) + "\n",
-              encoding="utf-8",
-          )
+              TAG_DETAILS_FILE.write_text(
+                  "\n".join(consolidated_details) + "\n",
+                  encoding="utf-8",
+              )
 
 
           UPDATED_MANIFESTS_FILE.write_text(
@@ -1609,22 +1588,13 @@ jobs:
           )
 
 
-          manifest_changes_created = bool(
-              updated_manifests
-          )
-
-          any_changes_created = bool(
+          changes_created = bool(
               updated_manifests or baseline_files
           )
 
           write_output(
               "changes_created",
-              str(any_changes_created).lower(),
-          )
-
-          write_output(
-              "manifest_changes_created",
-              str(manifest_changes_created).lower(),
+              str(changes_created).lower(),
           )
 
           write_output(
@@ -1634,6 +1604,7 @@ jobs:
 
           write_output("tag_name", tag_name)
           write_output("merge_sha", merge_sha)
+          write_output("pre_merge_sha", pre_merge_sha)
           write_output(
               "tracker_reference",
               tracker_reference,
@@ -1644,6 +1615,8 @@ jobs:
           print("============================================================")
           print("Post-merge processing summary")
           print("============================================================")
+          print(f"Main before merge: {pre_merge_sha}")
+          print(f"Main after merge: {merge_sha}")
           print(
               "Changed specification packages: "
               f"{len(changed_specifications)}"
@@ -1653,33 +1626,14 @@ jobs:
               f"{len(deleted_specifications)}"
           )
           print(
-              "Updated specification/module manifests: "
+              "Updated manifests: "
               f"{len(updated_manifests)}"
           )
           print(
-              "Modules requiring version update: "
-              f"{len(modules_requiring_version_update)}"
+              "Modules requiring baseline: "
+              f"{len(unique_baseline_modules)}"
           )
-          print(
-              "Module baselines created: "
-              f"{len(module_package_records)}"
-          )
-          print(f"Baseline tag: {tag_name}")
-          print(
-              f"Baseline created: {baseline_created}"
-          )
-
-          if version_summary:
-              print("")
-              print("Version changes:")
-
-              for record in version_summary:
-                  print(
-                      f"- {record['type']}: "
-                      f"{record['logical_name']} | "
-                      f"{record['previous_version']} -> "
-                      f"{record['version']}"
-                  )
+          print(f"Baseline created: {baseline_created}")
           PYTHON_SCRIPT
 
       - name: Review generated changes
@@ -1687,6 +1641,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          echo "Main before merge:"
+          echo "${{ steps.baseline.outputs.pre_merge_sha }}"
+          echo ""
+
+          echo "Main after merge:"
+          echo "${{ steps.baseline.outputs.merge_sha }}"
+          echo ""
 
           echo "Affected specifications:"
           if [[ -s affected-specifications.txt ]]; then
@@ -1724,26 +1686,26 @@ jobs:
           if [[ -s baseline-files.txt ]]; then
             cat baseline-files.txt
           else
-            echo "No module baseline was generated."
+            echo "No baseline files were generated."
           fi
 
           echo ""
-          echo "Git changes:"
           git diff -- \
             HEMS/CODE_HEMS \
             HEMS/MOD_HEMS \
             HEMS/SPEC_HEMS \
             HEMS/BASELINES
 
-      - name: Commit manifest and baseline changes to main
+      - name: Commit generated changes to main
         if: steps.baseline.outputs.changes_created == 'true'
         shell: bash
         env:
           ACCESS_TOKEN: ${{ github.token }}
           SERVER_URL: ${{ github.server_url }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_NUMBER: ${{ needs.prepare-event.outputs.pr_number }}
           MERGE_SHA: ${{ steps.baseline.outputs.merge_sha }}
           TAG_NAME: ${{ steps.baseline.outputs.tag_name }}
+          BASELINE_CREATED: ${{ steps.baseline.outputs.baseline_created }}
         run: |
           set -euo pipefail
 
@@ -1774,7 +1736,7 @@ jobs:
             exit 0
           fi
 
-          if [[ "${{ steps.baseline.outputs.baseline_created }}" == "true" ]]; then
+          if [[ "$BASELINE_CREATED" == "true" ]]; then
             COMMIT_MESSAGE="Update manifests and create module baseline ${TAG_NAME} after PR #${PR_NUMBER}"
           else
             COMMIT_MESSAGE="Update specification manifests after PR #${PR_NUMBER}"
@@ -1808,9 +1770,9 @@ jobs:
           )"
 
           if [[ "$REMOTE_MAIN_SHA" != "$MERGE_SHA" ]]; then
-            echo "::error::The main branch changed after PR #${PR_NUMBER} was merged."
-            echo "::error::Expected main at ${MERGE_SHA}, but found ${REMOTE_MAIN_SHA}."
-            echo "::error::Reconcile the latest main branch and rerun the workflow."
+            echo "::error::main changed after PR #${PR_NUMBER} was merged."
+            echo "::error::Expected ${MERGE_SHA}, found ${REMOTE_MAIN_SHA}."
+            echo "::error::Rerun the workflow after reconciling main."
             exit 1
           fi
 
@@ -1873,15 +1835,8 @@ jobs:
           cleanup_auth
           trap - EXIT
 
-          echo "Created consolidated baseline tag: ${TAG_NAME}"
+          echo "Created baseline tag: ${TAG_NAME}"
           echo "Tag target: ${TAG_TARGET}"
-          echo ""
-          echo "The tag points to the automation commit containing:"
-          echo "- Updated specification manifests"
-          echo "- Updated module manifests"
-          echo "- Generated baseline manifests"
-          echo "- Checksum files"
-          echo "- Module ZIP packages"
 
       - name: Workflow summary
         if: always()
@@ -1892,42 +1847,39 @@ jobs:
           echo "============================================================"
           echo "HEMS post-merge workflow summary"
           echo "============================================================"
-          echo "Pull Request: #${{ github.event.pull_request.number }}"
-          echo "Merge commit: ${{ github.event.pull_request.merge_commit_sha }}"
+          echo "Pull Request: #${{ needs.prepare-event.outputs.pr_number }}"
+          echo "Merge commit: ${{ needs.prepare-event.outputs.merge_sha }}"
           echo "Tracker reference: ${{ steps.baseline.outputs.tracker_reference }}"
           echo ""
 
           if [[ "${{ steps.baseline.outputs.changes_created }}" != "true" ]]; then
-            echo "No applicable HEMS manifest or baseline changes were generated."
+            echo "No applicable HEMS changes were generated."
             exit 0
           fi
 
-          echo "Manifest changes created:"
-          echo "${{ steps.baseline.outputs.manifest_changes_created }}"
+          echo "Main before merge:"
+          echo "${{ steps.baseline.outputs.pre_merge_sha }}"
           echo ""
 
-          echo "Module baseline created:"
+          echo "Main after merge:"
+          echo "${{ steps.baseline.outputs.merge_sha }}"
+          echo ""
+
+          echo "Baseline created:"
           echo "${{ steps.baseline.outputs.baseline_created }}"
           echo ""
 
           if [[ -s version-summary.txt ]]; then
             echo "Version changes:"
             cat version-summary.txt
-            echo ""
           fi
 
           if [[ "${{ steps.baseline.outputs.baseline_created }}" == "true" ]]; then
+            echo ""
             echo "Baseline tag:"
             echo "${{ steps.baseline.outputs.tag_name }}"
-            echo ""
-
-            echo "Updated modules:"
-            cat updated-modules.txt
-            echo ""
-
-            echo "Generated baseline files:"
-            cat baseline-files.txt
           else
-            echo "Only specification manifests were updated."
-            echo "No module baseline or tag was created."
+            echo ""
+            echo "Only affected specification manifests were updated."
+            echo "No parent module baseline was required."
           fi
