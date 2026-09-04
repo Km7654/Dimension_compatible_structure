@@ -1,0 +1,36 @@
+manifest_level: "specification"
+specification: "obmxxxx2xg"
+package: "a_FLPC_MWOU_CTL_obmxxxx2xg_A_RI_16_0(1.0)"
+type: "generated_code_specification"
+area: "CODE_HEMS"
+function: "FLPC"
+sub_function: "FLPC_MWOU"
+module: "FLPC_MWOU_CTL"
+version: 1
+delivery_cycle: "not_released"
+version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/obmxxxx2xg/v1"
+commit: "46e8234b368804ef675542669f1d6af6ceaf537c"
+pull_request: "38"
+updated_utc: "2026-08-31T10:43:11Z"
+source_branch: "feature/a"
+target_branch: "main"
+pull_request_title: "added a workflow"
+generated_by: "GitHub Actions"
+automation_owned: true
+main_branch_only: true
+files:
+  - "FLPC_MWOU_CTL_obmxxxx2xg.c"
+  - "FLPC_MWOU_CTL_obmxxxx2xg.h"
+  - "FLPC_MWOU_CTL_obmxxxx2xg_Memmap.h"
+item_version:
+  version: 1
+  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/obmxxxx2xg/v1"
+  sha: "46e8234b368804ef675542669f1d6af6ceaf537c"
+  pr: "38"
+  updated_utc: "2026-08-31T10:43:11Z"
+item_version_history:
+  - version: 1
+    label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/obmxxxx2xg/v1"
+    sha: "46e8234b368804ef675542669f1d6af6ceaf537c"
+    pr: "38"
+    updated_utc: "2026-08-31T10:43:11Z"

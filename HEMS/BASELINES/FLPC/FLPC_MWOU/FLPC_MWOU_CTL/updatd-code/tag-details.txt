@@ -1,0 +1,15 @@
+HEMS module baseline
+
+Tag: updatd-code
+Function: FLPC
+Sub-function: FLPC_MWOU
+Module: FLPC_MWOU_CTL
+Pull request: #38
+Merge commit: 46e8234b368804ef675542669f1d6af6ceaf537c
+
+Original merge message:
+updatd code
+
+added a workflow
+
+Downloadable module ZIP: HEMS/BASELINES/FLPC/FLPC_MWOU/FLPC_MWOU_CTL/updatd-code/FLPC_MWOU_CTL-updatd-code.zip

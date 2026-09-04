@@ -1,0 +1,41 @@
+manifest_level: "specification"
+specification: "adacxxx2xg"
+package: "a_FLPC_MWOU_CSM_adacxxx2xg_A_RI_16_0(1.0)"
+type: "generated_code_specification"
+area: "CODE_HEMS"
+function: "FLPC"
+sub_function: "FLPC_MWOU"
+module: "FLPC_MWOU_CSM"
+version: 2
+delivery_cycle: "not_released"
+version_label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CSM/adacxxx2xg/v2"
+commit: "45f430d2ab10296e19c74ed6f95214470d02e519"
+pull_request: "42"
+updated_utc: "2026-09-03T12:50:30Z"
+source_branch: "feature/a"
+target_branch: "main"
+pull_request_title: "Update FLPC_MWOU_CSM_adacxxx2xg.c"
+generated_by: "GitHub Actions"
+automation_owned: true
+main_branch_only: true
+files:
+  - "FLPC_MWOU_CSM_adacxxx2xg.c"
+  - "FLPC_MWOU_CSM_adacxxx2xg.h"
+  - "FLPC_MWOU_CSM_adacxxx2xg_Memmap.h"
+item_version:
+  version: 2
+  label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CSM/adacxxx2xg/v2"
+  sha: "45f430d2ab10296e19c74ed6f95214470d02e519"
+  pr: "42"
+  updated_utc: "2026-09-03T12:50:30Z"
+item_version_history:
+  - version: 1
+    label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CSM/adacxxx2xg/v1"
+    sha: "dd2eb1455aec64b5bffae086d15d87037b15c08b"
+    pr: "35"
+    updated_utc: "2026-08-31T09:21:57Z"
+  - version: 2
+    label: "specification/CODE_HEMS/FLPC/FLPC_MWOU/FLPC_MWOU_CSM/adacxxx2xg/v2"
+    sha: "45f430d2ab10296e19c74ed6f95214470d02e519"
+    pr: "42"
+    updated_utc: "2026-09-03T12:50:30Z"
