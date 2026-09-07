@@ -1,0 +1,20 @@
+HEMS module baseline
+
+Tag: hems-baseline-pr-63-aa941e7
+Repository: Km7654/Dimension_compatible_structure
+Pull request: #63
+Pull request title: Km7654 patch 1
+Tracker reference: not_available
+Main before merge: beee26cc45b0fe4d0ae4d5511d29014571fd6137
+Main after merge: aa941e7fb9f3be997f265441bcdc3aa4dc1bd70b
+Function: ASXX
+Sub-function: ASXX_ADMX
+Module: ASXX_ADMX_CSM
+
+Original merge message:
+Merge pull request #63 from Km7654/Km7654-patch-1
+
+Km7654 patch 1
+
+Downloadable module ZIP:
+HEMS/BASELINES/ASXX/ASXX_ADMX/ASXX_ADMX_CSM/hems-baseline-pr-63-aa941e7/ASXX_ADMX_CSM-hems-baseline-pr-63-aa941e7.zip

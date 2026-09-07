@@ -1,0 +1,46 @@
+manifest_level: "specification"
+specification: "afsfdsa2"
+package: "a_ATXX_OBMX_MGN_afsfdsa2_A_RI_16_0(1.0)"
+type: "generated_code_specification"
+area: "CODE_HEMS"
+function: "ATXX"
+sub_function: "ATXX_OBMX"
+module: "ATXX_OBMX_MGN"
+version: 3
+delivery_cycle: "not_released"
+version_label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v3"
+commit: "6e9876650f1bfa99a7ab15fd7bf09116f1dd774d"
+pull_request: "62"
+updated_utc: "2026-09-06T13:21:56Z"
+source_branch: "Km7654-patch-1"
+target_branch: "main"
+pull_request_title: "Update ATXX_OBMX_MGN_afsfdsa2.c"
+generated_by: "GitHub Actions"
+automation_owned: true
+main_branch_only: true
+files:
+  - "ATXX_OBMX_MGN_afsfdsa2.c"
+  - "ATXX_OBMX_MGN_afsfdsa2.h"
+  - "ATXX_OBMX_MGN_afsfdsa2_Memmap.h"
+item_version:
+  version: 3
+  label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v3"
+  sha: "6e9876650f1bfa99a7ab15fd7bf09116f1dd774d"
+  pr: "62"
+  updated_utc: "2026-09-06T13:21:56Z"
+item_version_history:
+  - version: 1
+    label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v1"
+    sha: "86aad4c27e0eb3eb0c1d7d89549550db88db9948"
+    pr: "60"
+    updated_utc: "2026-09-04T12:20:23Z"
+  - version: 2
+    label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v2"
+    sha: "7fadb89d2fd753f4cb64da7c843580b53cb8512b"
+    pr: "61"
+    updated_utc: "2026-09-04T12:23:18Z"
+  - version: 3
+    label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v3"
+    sha: "6e9876650f1bfa99a7ab15fd7bf09116f1dd774d"
+    pr: "62"
+    updated_utc: "2026-09-06T13:21:56Z"
