@@ -4,8 +4,7 @@ pipeline {
     }
 
     options {
-        skipDefaultCheckout(true)
-        timestamps()
+    skipDefaultCheckout(true)
     }
 
     stages {
