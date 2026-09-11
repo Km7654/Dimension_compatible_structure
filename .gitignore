@@ -2,3 +2,6 @@
 .DS_Store
 Thumbs.db
 *.log
+
+# Jenkins validation temporary files
+changed_files.txt
