@@ -1,0 +1,453 @@
+pipeline {
+    agent {
+        label 'windows'
+    }
+
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        BASH_EXE = 'C:\\Users\\kss932546\\AppData\\Local\\Programs\\Git\\bin\\bash.exe'
+        GH_EXE_WINDOWS = 'C:\\Users\\kss932546\\Tools\\GitHubCLI\\bin\\gh.exe'
+        GH_EXE_BASH = '/c/Users/kss932546/Tools/GitHubCLI/bin/gh.exe'
+        GH_REPO = 'Km7654/Dimension_compatible_structure'
+        MAIN_BRANCH = 'main'
+        OUTPUT_DIR = 'jenkins-output/module-baseline'
+    }
+
+    stages {
+        stage('Validate Parameters') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Validating HEMS Module Baseline parameters
+echo ============================================================
+echo Merge commit:  %MERGE_SHA%
+echo Apply changes: %APPLY_CHANGES%
+echo Push changes:  %PUSH_CHANGES%
+echo Create tag:    %CREATE_TAG%
+echo.
+
+if "%MERGE_SHA%"=="" (
+    echo ERROR: MERGE_SHA must not be empty.
+    exit /b 1
+)
+
+powershell.exe -NoProfile -NonInteractive -Command "if ('%MERGE_SHA%' -notmatch '^[0-9a-fA-F]{40}$') { exit 1 }"
+if errorlevel 1 (
+    echo ERROR: MERGE_SHA must be exactly 40 hexadecimal characters.
+    echo Received: %MERGE_SHA%
+    exit /b 1
+)
+
+if /I not "%APPLY_CHANGES%"=="false" if /I not "%APPLY_CHANGES%"=="true" (
+    echo ERROR: APPLY_CHANGES must be false or true.
+    exit /b 1
+)
+
+if /I not "%PUSH_CHANGES%"=="false" if /I not "%PUSH_CHANGES%"=="true" (
+    echo ERROR: PUSH_CHANGES must be false or true.
+    exit /b 1
+)
+
+if /I not "%CREATE_TAG%"=="false" if /I not "%CREATE_TAG%"=="true" (
+    echo ERROR: CREATE_TAG must be false or true.
+    exit /b 1
+)
+
+if /I "%PUSH_CHANGES%"=="true" (
+    if /I not "%APPLY_CHANGES%"=="true" (
+        echo ERROR: PUSH_CHANGES=true requires APPLY_CHANGES=true.
+        exit /b 1
+    )
+)
+
+if /I "%CREATE_TAG%"=="true" (
+    if /I not "%APPLY_CHANGES%"=="true" (
+        echo ERROR: CREATE_TAG=true requires APPLY_CHANGES=true.
+        exit /b 1
+    )
+
+    if /I not "%PUSH_CHANGES%"=="true" (
+        echo ERROR: CREATE_TAG=true requires PUSH_CHANGES=true.
+        exit /b 1
+    )
+)
+
+echo Parameter validation passed.
+'''
+            }
+        }
+
+        stage('Checkout Main Repository') {
+            steps {
+                deleteDir()
+
+                checkout scm
+
+                bat '''
+@echo off
+
+echo ============================================================
+echo Repository checkout completed
+echo ============================================================
+echo Workspace: %WORKSPACE%
+echo.
+
+git status --short
+if errorlevel 1 (
+    echo ERROR: Unable to read Git repository status.
+    exit /b 1
+)
+
+echo.
+echo Current commit:
+git log -1 --oneline
+if errorlevel 1 (
+    echo ERROR: Unable to read the current Git commit.
+    exit /b 1
+)
+'''
+            }
+        }
+
+        stage('Verify Required Environment') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Verifying HEMS Module Baseline environment
+echo ============================================================
+echo.
+
+echo Git:
+git --version
+if errorlevel 1 (
+    echo ERROR: Git is unavailable.
+    exit /b 1
+)
+
+echo.
+echo Git Bash:
+"%BASH_EXE%" --version
+if errorlevel 1 (
+    echo ERROR: Git Bash is unavailable at:
+    echo %BASH_EXE%
+    exit /b 1
+)
+
+echo.
+echo GitHub CLI:
+"%GH_EXE_WINDOWS%" --version
+if errorlevel 1 (
+    echo ERROR: GitHub CLI is unavailable at:
+    echo %GH_EXE_WINDOWS%
+    exit /b 1
+)
+
+echo.
+echo PowerShell:
+powershell.exe -NoProfile -NonInteractive -Command "$PSVersionTable.PSVersion.ToString()"
+if errorlevel 1 (
+    echo ERROR: PowerShell is unavailable.
+    exit /b 1
+)
+
+echo.
+echo PowerShell Compress-Archive:
+powershell.exe -NoProfile -NonInteractive -Command "Get-Command Compress-Archive | Select-Object -ExpandProperty Name"
+if errorlevel 1 (
+    echo ERROR: PowerShell Compress-Archive is unavailable.
+    exit /b 1
+)
+
+echo.
+echo Baseline shell script:
+if not exist "jenkins\\scripts\\hems-module-baseline.sh" (
+    echo ERROR: The HEMS Module Baseline shell script is missing.
+    echo Expected: jenkins\\scripts\\hems-module-baseline.sh
+    exit /b 1
+)
+
+echo.
+echo HEMS repository root:
+if not exist "HEMS" (
+    echo ERROR: The HEMS directory is missing from the workspace.
+    exit /b 1
+)
+
+echo All required tools and files are available.
+'''
+            }
+        }
+
+        stage('Verify GitHub Access') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Verifying GitHub authentication and repository access
+echo ============================================================
+echo.
+
+"%GH_EXE_WINDOWS%" auth status
+if errorlevel 1 (
+    echo ERROR: Jenkins cannot access GitHub CLI authentication.
+    echo Confirm that Jenkins is running under the Windows account
+    echo used for the GitHub CLI browser login.
+    exit /b 1
+)
+
+echo.
+echo Repository access:
+"%GH_EXE_WINDOWS%" repo view %GH_REPO% --json nameWithOwner,viewerPermission
+if errorlevel 1 (
+    echo ERROR: Jenkins cannot access repository %GH_REPO%.
+    exit /b 1
+)
+
+echo.
+echo GitHub access verification passed.
+'''
+            }
+        }
+
+        stage('Verify Merge Commit') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Verifying the supplied merge commit
+echo ============================================================
+echo Merge commit: %MERGE_SHA%
+echo.
+
+git fetch --prune origin +refs/heads/%MAIN_BRANCH%:refs/remotes/origin/%MAIN_BRANCH%
+if errorlevel 1 (
+    echo ERROR: Unable to fetch origin/%MAIN_BRANCH%.
+    exit /b 1
+)
+
+git cat-file -e "%MERGE_SHA%^{commit}" 2>nul
+if not errorlevel 1 (
+    echo Merge commit is already available locally.
+    goto commit_available
+)
+
+echo Merge commit is not currently available locally.
+echo Attempting direct fetch.
+
+git fetch origin %MERGE_SHA%
+if errorlevel 1 (
+    echo WARNING: Direct merge-commit fetch did not complete.
+    echo Checking the local repository again.
+)
+
+git cat-file -e "%MERGE_SHA%^{commit}" 2>nul
+if errorlevel 1 (
+    echo ERROR: The supplied merge commit is unavailable:
+    echo %MERGE_SHA%
+    exit /b 1
+)
+
+:commit_available
+
+echo.
+echo Merge commit details:
+git log -1 --format=fuller %MERGE_SHA%
+if errorlevel 1 (
+    echo ERROR: Unable to display the merge commit.
+    exit /b 1
+)
+
+echo.
+echo First parent:
+git rev-parse "%MERGE_SHA%^1"
+if errorlevel 1 (
+    echo ERROR: The supplied commit has no first parent.
+    exit /b 1
+)
+
+echo.
+echo Commit parent information:
+git rev-list --parents -n 1 %MERGE_SHA%
+if errorlevel 1 (
+    echo ERROR: Unable to read the commit parent information.
+    exit /b 1
+)
+
+echo.
+echo Merge commit verification passed.
+'''
+            }
+        }
+
+        stage('Run Module Baseline Processor') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Running HEMS Module Baseline processor
+echo ============================================================
+echo Merge commit:  %MERGE_SHA%
+echo Apply changes: %APPLY_CHANGES%
+echo Push changes:  %PUSH_CHANGES%
+echo Create tag:    %CREATE_TAG%
+echo.
+
+"%BASH_EXE%" -lc "export MERGE_SHA='%MERGE_SHA%'; export APPLY_CHANGES='%APPLY_CHANGES%'; export PUSH_CHANGES='%PUSH_CHANGES%'; export CREATE_TAG='%CREATE_TAG%'; export MAIN_BRANCH='%MAIN_BRANCH%'; export GH_REPO='%GH_REPO%'; export GH_EXE='%GH_EXE_BASH%'; export POWERSHELL_EXE='powershell.exe'; export OUTPUT_DIR='%OUTPUT_DIR%'; ./jenkins/scripts/hems-module-baseline.sh"
+
+if errorlevel 1 (
+    echo.
+    echo ERROR: HEMS Module Baseline processing failed.
+    exit /b 1
+)
+
+echo.
+echo HEMS Module Baseline processing completed successfully.
+'''
+            }
+        }
+
+        stage('Display Processing Results') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo HEMS Module Baseline result
+echo ============================================================
+echo.
+
+if exist "jenkins-output\\module-baseline\\result.env" (
+    echo Result:
+    type "jenkins-output\\module-baseline\\result.env"
+) else (
+    echo WARNING: result.env was not generated.
+)
+
+echo.
+echo ------------------------------------------------------------
+echo Changed records
+echo ------------------------------------------------------------
+
+if exist "jenkins-output\\module-baseline\\changed-records.tsv" (
+    type "jenkins-output\\module-baseline\\changed-records.tsv"
+) else (
+    echo No changed-record list was generated.
+)
+
+echo.
+echo ------------------------------------------------------------
+echo Affected specifications
+echo ------------------------------------------------------------
+
+if exist "jenkins-output\\module-baseline\\affected-specifications.txt" (
+    type "jenkins-output\\module-baseline\\affected-specifications.txt"
+) else (
+    echo No affected-specification list was generated.
+)
+
+echo.
+echo ------------------------------------------------------------
+echo Updated modules
+echo ------------------------------------------------------------
+
+if exist "jenkins-output\\module-baseline\\updated-modules.txt" (
+    type "jenkins-output\\module-baseline\\updated-modules.txt"
+) else (
+    echo No updated-module list was generated.
+)
+
+echo.
+echo ------------------------------------------------------------
+echo Version summary
+echo ------------------------------------------------------------
+
+if exist "jenkins-output\\module-baseline\\version-summary.txt" (
+    type "jenkins-output\\module-baseline\\version-summary.txt"
+) else (
+    echo No version summary was generated.
+)
+
+echo.
+echo ------------------------------------------------------------
+echo Updated manifests
+echo ------------------------------------------------------------
+
+if exist "jenkins-output\\module-baseline\\updated-manifests.txt" (
+    type "jenkins-output\\module-baseline\\updated-manifests.txt"
+) else (
+    echo No updated-manifest list was generated.
+)
+
+echo.
+echo ------------------------------------------------------------
+echo Baseline files
+echo ------------------------------------------------------------
+
+if exist "jenkins-output\\module-baseline\\baseline-files.txt" (
+    type "jenkins-output\\module-baseline\\baseline-files.txt"
+) else (
+    echo No baseline-file list was generated.
+)
+
+echo.
+echo ============================================================
+echo Result display completed
+echo ============================================================
+'''
+            }
+        }
+
+        stage('Review Workspace Changes') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Reviewing workspace changes
+echo ============================================================
+echo.
+
+git status --short
+
+echo.
+echo HEMS manifest and baseline differences:
+git diff -- HEMS/CODE_HEMS HEMS/MOD_HEMS HEMS/SPEC_HEMS HEMS/BASELINES
+
+echo.
+echo Workspace review completed.
+'''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'HEMS Module Baseline pipeline completed successfully.'
+        }
+
+        failure {
+            echo 'HEMS Module Baseline pipeline failed. Review the failed stage and console output.'
+        }
+
+        always {
+            archiveArtifacts(
+                artifacts: 'jenkins-output/module-baseline/**',
+                allowEmptyArchive: true,
+                fingerprint: false
+            )
+
+            echo 'HEMS Module Baseline pipeline completed.'
+        }
+    }
+}
