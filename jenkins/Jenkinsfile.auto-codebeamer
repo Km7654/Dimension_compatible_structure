@@ -1,0 +1,199 @@
+pipeline {
+    agent {
+        label 'windows'
+    }
+
+    options {
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        BASH_EXE = 'C:\\Users\\kss932546\\AppData\\Local\\Programs\\Git\\bin\\bash.exe'
+        GH_EXE_BASH = '/c/Users/kss932546/Tools/GitHubCLI/bin/gh.exe'
+        GH_REPO = 'Km7654/Dimension_compatible_structure'
+        MAIN_BRANCH = 'main'
+    }
+
+    stages {
+        stage('Validate Parameters') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Validating Auto Codebeamer parameters
+echo ============================================================
+echo Branch to process: %BRANCH_TO_PROCESS%
+echo Automatic merge:  %AUTO_MERGE%
+echo.
+
+if "%BRANCH_TO_PROCESS%"=="" (
+    echo ERROR: BRANCH_TO_PROCESS must not be empty.
+    exit /b 1
+)
+
+if /I "%BRANCH_TO_PROCESS%"=="main" (
+    echo ERROR: BRANCH_TO_PROCESS must not be main.
+    exit /b 1
+)
+
+if /I not "%AUTO_MERGE%"=="false" if /I not "%AUTO_MERGE%"=="true" (
+    echo ERROR: AUTO_MERGE must be false or true.
+    exit /b 1
+)
+
+echo Parameter validation passed.
+'''
+            }
+        }
+
+        stage('Checkout Automation Scripts') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Verify Environment') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Verifying Auto Codebeamer environment
+echo ============================================================
+echo Workspace: %WORKSPACE%
+echo.
+
+echo Git:
+git --version
+if errorlevel 1 (
+    echo ERROR: Git is unavailable.
+    exit /b 1
+)
+
+echo.
+echo Git Bash:
+"%BASH_EXE%" --version
+if errorlevel 1 (
+    echo ERROR: Git Bash is unavailable at:
+    echo %BASH_EXE%
+    exit /b 1
+)
+
+echo.
+echo GitHub CLI:
+"C:\\Users\\kss932546\\Tools\\GitHubCLI\\bin\\gh.exe" --version
+if errorlevel 1 (
+    echo ERROR: GitHub CLI is unavailable.
+    exit /b 1
+)
+
+echo.
+echo Auto Codebeamer script:
+if not exist "jenkins\\scripts\\auto-codebeamer-pr-merge.sh" (
+    echo ERROR: The Auto Codebeamer shell script is missing.
+    echo Expected: jenkins\\scripts\\auto-codebeamer-pr-merge.sh
+    exit /b 1
+)
+
+echo All required tools and scripts are available.
+'''
+            }
+        }
+
+        stage('Verify GitHub Access') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Verifying GitHub authentication and repository access
+echo ============================================================
+
+"C:\\Users\\kss932546\\Tools\\GitHubCLI\\bin\\gh.exe" auth status
+if errorlevel 1 (
+    echo ERROR: Jenkins cannot access GitHub CLI authentication.
+    exit /b 1
+)
+
+echo.
+"C:\\Users\\kss932546\\Tools\\GitHubCLI\\bin\\gh.exe" repo view %GH_REPO% --json nameWithOwner,viewerPermission
+if errorlevel 1 (
+    echo ERROR: Jenkins cannot access repository %GH_REPO%.
+    exit /b 1
+)
+
+echo.
+echo GitHub access verification passed.
+'''
+            }
+        }
+
+        stage('Run Auto Codebeamer PR Process') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Running Auto Codebeamer PR process
+echo ============================================================
+echo Feature branch: %BRANCH_TO_PROCESS%
+echo Target branch:  %MAIN_BRANCH%
+echo Automatic merge: %AUTO_MERGE%
+echo.
+
+"%BASH_EXE%" -lc "export BRANCH_TO_PROCESS='%BRANCH_TO_PROCESS%'; export AUTO_MERGE='%AUTO_MERGE%'; export MAIN_BRANCH='%MAIN_BRANCH%'; export GH_REPO='%GH_REPO%'; export GH_EXE='%GH_EXE_BASH%'; ./jenkins/scripts/auto-codebeamer-pr-merge.sh '%BRANCH_TO_PROCESS%'"
+
+if errorlevel 1 (
+    echo ERROR: Auto Codebeamer PR processing failed.
+    exit /b 1
+)
+
+echo.
+echo Auto Codebeamer PR processing completed successfully.
+'''
+            }
+        }
+
+        stage('Display Result') {
+            steps {
+                bat '''
+@echo off
+
+echo ============================================================
+echo Auto Codebeamer result
+echo ============================================================
+
+if exist "jenkins-output\\auto-codebeamer\\result.env" (
+    type "jenkins-output\\auto-codebeamer\\result.env"
+) else (
+    echo WARNING: No result file was generated.
+)
+
+echo ============================================================
+'''
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Auto Codebeamer Jenkins pipeline completed successfully.'
+        }
+
+        failure {
+            echo 'Auto Codebeamer Jenkins pipeline failed. Review the failed stage and console output.'
+        }
+
+        always {
+            archiveArtifacts(
+                artifacts: 'jenkins-output/auto-codebeamer/**',
+                allowEmptyArchive: true,
+                fingerprint: false
+            )
+
+            echo 'Auto Codebeamer Jenkins pipeline completed.'
+        }
+    }
+}
