@@ -6,16 +6,16 @@ area: "CODE_HEMS"
 function: "ASXX"
 sub_function: "ASXX_ADMX"
 module: "ASXX_ADMX_CSM"
-version: 3
+version: 4
 delivery_cycle: "not_released"
-version_label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CSM/adacxxx2xg/v3"
-commit: "f6abec96a31462af97a20736a84ed84452213952"
-pull_request: "66"
-updated_utc: "2026-09-07T06:20:47Z"
+version_label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CSM/adacxxx2xg/v4"
+commit: "3ee86e7eae9eb4a4d59660edeb3984ab2c130b9b"
+pull_request: "73"
+updated_utc: "2026-09-16T15:10:50Z"
 source_branch: "feature/a"
 target_branch: "main"
-pull_request_title: "#446956 ASXX_ADMX_CSM_adacxxx2xg.c 3"
-generated_by: "GitHub Actions"
+pull_request_title: "#1111111 ASXX_ADMX_CSM_adacxxx2xg.c 4"
+generated_by: "Jenkins"
 automation_owned: true
 main_branch_only: true
 files:
@@ -23,11 +23,11 @@ files:
   - "ASXX_ADMX_CSM_adacxxx2xg.h"
   - "ASXX_ADMX_CSM_adacxxx2xg_Memmap.h"
 item_version:
-  version: 3
-  label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CSM/adacxxx2xg/v3"
-  sha: "f6abec96a31462af97a20736a84ed84452213952"
-  pr: "66"
-  updated_utc: "2026-09-07T06:20:47Z"
+  version: 4
+  label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CSM/adacxxx2xg/v4"
+  sha: "3ee86e7eae9eb4a4d59660edeb3984ab2c130b9b"
+  pr: "73"
+  updated_utc: "2026-09-16T15:10:50Z"
 item_version_history:
   - version: 1
     label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CSM/adacxxx2xg/v1"
@@ -44,3 +44,8 @@ item_version_history:
     sha: "f6abec96a31462af97a20736a84ed84452213952"
     pr: "66"
     updated_utc: "2026-09-07T06:20:47Z"
+  - version: 4
+    label: "specification/CODE_HEMS/ASXX/ASXX_ADMX/ASXX_ADMX_CSM/adacxxx2xg/v4"
+    sha: "3ee86e7eae9eb4a4d59660edeb3984ab2c130b9b"
+    pr: "73"
+    updated_utc: "2026-09-16T15:10:50Z"
