@@ -74,20 +74,22 @@ echo Both validation scripts are available.
 echo ============================================================
 echo Verifying GitHub CLI access from Jenkins
 echo ============================================================
+echo.
 
 echo GitHub authentication status:
 "C:\\Users\\kss932546\\Tools\\GitHubCLI\\bin\\gh.exe" auth status
 if errorlevel 1 (
+    echo.
     echo ERROR: Jenkins cannot access the GitHub CLI authentication.
-    echo Confirm that Jenkins is running under the Windows account
-    echo that was used for GitHub CLI login.
+    echo Confirm that Jenkins is running under Windows user kss932546.
     exit /b 1
 )
 
 echo.
-echo Repository access:
+echo GitHub repository access:
 "C:\\Users\\kss932546\\Tools\\GitHubCLI\\bin\\gh.exe" repo view Km7654/Dimension_compatible_structure --json nameWithOwner,viewerPermission
 if errorlevel 1 (
+    echo.
     echo ERROR: Jenkins cannot access the GitHub repository through GitHub CLI.
     exit /b 1
 )
@@ -143,11 +145,11 @@ echo HEMS delivery check passed.
 
     post {
         success {
-            echo 'HEMS repository validation and GitHub CLI access check passed.'
+            echo 'HEMS validation and GitHub CLI access checks passed.'
         }
 
         failure {
-            echo 'HEMS validation failed. Check the failed stage and console output.'
+            echo 'HEMS validation failed. Review the failed stage and console output.'
         }
 
         always {
