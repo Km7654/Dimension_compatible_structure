@@ -5,3 +5,5 @@ Thumbs.db
 
 # Jenkins validation temporary files
 changed_files.txt
+# Jenkins Auto Codebeamer temporary output
+jenkins-output/
