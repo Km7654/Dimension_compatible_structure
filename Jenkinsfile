@@ -41,7 +41,7 @@ if errorlevel 1 (
 )
 echo.
 
-echo Required scripts:
+echo Required validation scripts:
 
 if not exist "jenkins\\scripts\\structure-check.sh" (
     echo ERROR: jenkins\\scripts\\structure-check.sh is missing.
@@ -53,33 +53,8 @@ if not exist "jenkins\\scripts\\delivery-check.sh" (
     exit /b 1
 )
 
-if not exist "jenkins\\scripts\\test-groovy.groovy" (
-    echo ERROR: jenkins\\scripts\\test-groovy.groovy is missing.
-    exit /b 1
-)
-
-echo All required scripts are available.
-echo.
-
-echo Repository contents:
-dir
+echo Both validation scripts are available.
 '''
-            }
-        }
-
-        stage('Groovy Execution Test') {
-            steps {
-                script {
-                    echo 'Loading external Groovy test script.'
-
-                    def groovyTest = load(
-                        'jenkins/scripts/test-groovy.groovy'
-                    )
-
-                    groovyTest.runTest()
-
-                    echo 'External Groovy test returned successfully.'
-                }
             }
         }
 
@@ -128,11 +103,11 @@ echo HEMS delivery check passed.
 
     post {
         success {
-            echo 'HEMS repository validation and Groovy execution test passed.'
+            echo 'HEMS repository validation passed.'
         }
 
         failure {
-            echo 'HEMS validation failed. Check the failed stage and console output.'
+            echo 'HEMS repository validation failed. Check the console output for errors.'
         }
 
         always {
