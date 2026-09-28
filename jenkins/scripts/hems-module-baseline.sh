@@ -610,6 +610,8 @@ main() {
       [[ "$remote_main" == "$MERGE_SHA" ]] || fail "main changed after the merge. Expected $MERGE_SHA, found $remote_main."
       git commit -m "Update HEMS manifests and baseline after PR #$PR_NUMBER"
       "$GH_EXE" auth setup-git
+      git lfs install
+      git lfs push origin HEAD
       git push origin "HEAD:$MAIN_BRANCH"
     fi
   fi
