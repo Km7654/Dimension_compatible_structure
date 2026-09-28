@@ -1,0 +1,12 @@
+HEMS module baseline
+
+Tag: hems-baseline-pr-79-77b5e11
+Repository: Km7654/Dimension_compatible_structure
+Pull request: #79
+Pull request title: Feature/a
+Main before merge: e1c909a58b8b13d2448c32d3aa084d0a8e7941e6
+Main after merge: 77b5e111c092de1fd5de32acd3a1dbcf4e9f5cd2
+Function: ATSL
+Sub-function: ATSL_MWOU
+Module: ATSL_MWOU_CTL
+ZIP: HEMS/BASELINES/ATSL/ATSL_MWOU/ATSL_MWOU_CTL/hems-baseline-pr-79-77b5e11/ATSL_MWOU_CTL-hems-baseline-pr-79-77b5e11.zip
