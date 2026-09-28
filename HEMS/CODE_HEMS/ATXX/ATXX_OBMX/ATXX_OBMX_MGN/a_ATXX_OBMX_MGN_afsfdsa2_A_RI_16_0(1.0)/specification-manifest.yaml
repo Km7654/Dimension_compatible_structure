@@ -6,16 +6,16 @@ area: "CODE_HEMS"
 function: "ATXX"
 sub_function: "ATXX_OBMX"
 module: "ATXX_OBMX_MGN"
-version: 3
+version: 4
 delivery_cycle: "not_released"
-version_label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v3"
-commit: "6e9876650f1bfa99a7ab15fd7bf09116f1dd774d"
-pull_request: "62"
-updated_utc: "2026-09-06T13:21:56Z"
-source_branch: "Km7654-patch-1"
+version_label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v4"
+commit: "5acce1f49ce661e708a6d42491ed8c243e7677cf"
+pull_request: "74"
+updated_utc: "2026-09-28T09:25:23Z"
+source_branch: "feature/a"
 target_branch: "main"
-pull_request_title: "Update ATXX_OBMX_MGN_afsfdsa2.c"
-generated_by: "GitHub Actions"
+pull_request_title: "#123123123 ATXX_OBMX_MGN_afsfdsa2.c 4"
+generated_by: "Jenkins"
 automation_owned: true
 main_branch_only: true
 files:
@@ -23,11 +23,11 @@ files:
   - "ATXX_OBMX_MGN_afsfdsa2.h"
   - "ATXX_OBMX_MGN_afsfdsa2_Memmap.h"
 item_version:
-  version: 3
-  label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v3"
-  sha: "6e9876650f1bfa99a7ab15fd7bf09116f1dd774d"
-  pr: "62"
-  updated_utc: "2026-09-06T13:21:56Z"
+  version: 4
+  label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v4"
+  sha: "5acce1f49ce661e708a6d42491ed8c243e7677cf"
+  pr: "74"
+  updated_utc: "2026-09-28T09:25:23Z"
 item_version_history:
   - version: 1
     label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v1"
@@ -44,3 +44,8 @@ item_version_history:
     sha: "6e9876650f1bfa99a7ab15fd7bf09116f1dd774d"
     pr: "62"
     updated_utc: "2026-09-06T13:21:56Z"
+  - version: 4
+    label: "specification/CODE_HEMS/ATXX/ATXX_OBMX/ATXX_OBMX_MGN/afsfdsa2/v4"
+    sha: "5acce1f49ce661e708a6d42491ed8c243e7677cf"
+    pr: "74"
+    updated_utc: "2026-09-28T09:25:23Z"
